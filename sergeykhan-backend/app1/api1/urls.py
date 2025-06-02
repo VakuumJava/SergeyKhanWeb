@@ -1,0 +1,110 @@
+# urls.py in your app
+
+from django.urls import path
+from .views import *
+from .balance_views import (
+    get_user_balance_detailed,
+    modify_balance,
+    get_balance_logs_detailed,
+    get_user_permissions,
+    get_all_balances
+)
+from .distancionka import (
+    get_distance_settings,
+    update_distance_settings,
+    get_master_distance_info,
+    get_all_masters_distance,
+    get_master_available_orders_with_distance,
+    force_update_all_masters_distance,
+    set_master_distance_manually,
+    reset_master_distance_to_automatic,
+    get_master_distance_with_orders
+)
+
+urlpatterns = [
+    path('create-test-order/', create_test_order, name='create_test_order'),
+    path('get-new-orders/', get_new_orders, name='get_new_orders'),
+    path('login/', LoginAPIView.as_view(), name='login'),
+    path('api/user/', get_user_by_token, name='get_user_by_token'),
+    path('orders/create/', create_order, name='create_order'),
+    path('get_processing_orders', get_processing_orders, name='get_processing_orders'),    path('assign/<int:order_id>/', assign_master, name='assign'),
+    path('assign/<int:order_id>/remove/', remove_master, name='remove_master'),
+    path('orders/assigned/', get_assigned_orders, name='get_assigned_orders'),
+    path('users/<int:user_id>/', get_user_by_id, name='get_user_by_id'),
+    path('orders/<int:order_id>/delete/', delete_order, name='delete_order'),
+    path('orders/<int:order_id>/update/', update_order, name='update_order'),
+    path('users/masters/', get_masters, name='get_masters'),
+    path('users/operators/', get_operators, name='get_operators'),
+    path('users/curators/', get_curators, name='get_curators'),    path('balance/<int:user_id>/', get_user_balance, name='get_user_balance'),  # legacy
+    path('balance/<int:user_id>/top-up/', top_up_balance, name='top_up_balance'),  # legacy
+    path('balance/<int:user_id>/deduct/', deduct_balance, name='deduct_balance'),  # legacy
+    path('balance/<int:user_id>/logs/', get_balance_logs, name='get_balance_logs'),  # legacy
+    
+    # Новая система управления балансами
+    path('api/balance/<int:user_id>/detailed/', get_user_balance_detailed, name='get_user_balance_detailed'),
+    path('api/balance/<int:user_id>/modify/', modify_balance, name='modify_balance'),
+    path('api/balance/<int:user_id>/logs/detailed/', get_balance_logs_detailed, name='get_balance_logs_detailed'),
+    path('api/balance/<int:user_id>/permissions/', get_user_permissions, name='get_user_permissions'),
+    path('api/balance/all/', get_all_balances, name='get_all_balances'),
+    path('api/user/', get_user_by_token, name='get_user_by_token'),
+    path('api/users/create/', create_user, name='create_user'),
+    path('api/orders/all/', get_all_orders, name='all_orders'),
+    path('api/orders/last-4hours/', get_orders_last_4hours, name='orders_last_4hours'),
+    path('api/orders/last-day/', get_orders_last_day, name='orders_last_day'),
+    path('api/orders/active/', get_active_orders, name='active_orders'),
+    path('api/orders/non-active/', get_non_active_orders, name='non_active_orders'),
+    path('orders/<int:order_id>/transfer/', transfer_order_to_warranty_master, name='transfer_order_to_warranty_master'),
+    path('orders/transferred/', get_transferred_orders),
+    path('orders/<int:order_id>/complete_transferred/', complete_transferred_order),
+    path('orders/<int:order_id>/approve/', approve_completed_order),
+    path('orders/master/<int:master_id>/', get_orders_by_master, name='get_orders_by_master'),
+    path('balance/<int:user_id>/history/', get_balance_with_history),
+    path('profit-distribution/', profit_distribution),
+    path('curator/fine-master/', fine_master),
+    path('mine',           get_my_events,      name='calendar-mine-no-slash'),  # support frontend GET /mine
+    path('mine/',           get_my_events,      name='calendar-mine'),
+    path('api/mine',        get_my_events,      name='calendar-mine-api'),  # support frontend without slash
+    path('api/mine/',       get_my_events,      name='calendar-mine-api-slash'),  # support frontend with slash
+    path('create/',         create_event,       name='calendar-create'),
+    path('update/<int:event_id>/', update_event_time, name='calendar-update'),
+    path('delete/<int:event_id>/', delete_event,      name='calendar-delete'),
+    path('contacts/', get_all_contacts, name='get_all_contacts'),
+    path('contacts/create/', create_contact, name='create_contact'),
+    path('contacts/<int:contact_id>/delete/', delete_contact, name='delete_contact'),
+    path('contacts/<int:contact_id>/mark_as_called/', mark_as_called, name='mark_as_called'),
+    path('contacts/called/', get_called_contacts, name='get_called_contacts'),
+    path('contacts/uncalled/', get_uncalled_contacts, name='get_uncalled_contacts'),
+    path('orders/guaranteed/<int:master_id>/', get_guaranteed_orders, name='get_guaranteed_orders'),
+    path('orders/guaranteed/', get_all_guaranteed_orders, name='get_all_guaranteed_orders'),
+    path('users/warranty-masters/', get_all_warranty_masters, name='get_all_warranty_masters'),    path('api/distribute/<int:order_id>/', distribute_order_profit, name='distribute_order_profit'),
+    
+    # Новые эндпоинты для логирования
+    path('api/logs/orders/<int:order_id>/', get_order_logs, name='get_order_logs'),
+    path('api/logs/orders/', get_all_order_logs, name='get_all_order_logs'),
+    path('api/logs/transactions/', get_transaction_logs, name='get_all_transaction_logs'),
+    path('api/logs/transactions/<int:user_id>/', get_transaction_logs, name='get_user_transaction_logs'),
+    path('api/orders/<int:order_id>/detail/', get_order_detail, name='get_order_detail'),
+    
+    # Улучшенные эндпоинты для гарантийных мастеров
+    path('api/users/warranty-masters/', get_warranty_masters, name='get_warranty_masters'),
+    path('api/orders/<int:order_id>/warranty/complete/', complete_warranty_order, name='complete_warranty_order'),
+    path('api/orders/<int:order_id>/warranty/approve/', approve_warranty_order, name='approve_warranty_order'),
+    path('api/warranty-masters/<int:master_id>/stats/', get_warranty_master_stats, name='get_warranty_master_stats'),
+    path('api/warranty-masters/my-stats/', get_warranty_master_stats, name='get_my_warranty_stats'),
+    
+    # Валидация ролей
+    path('api/validate-role/', validate_user_role, name='validate_user_role'),
+    path('api/master-panel/', master_panel_access, name='master_panel_access'),    path('api/curator-panel/', curator_panel_access, name='curator_panel_access'),
+    path('api/operator-panel/', operator_panel_access, name='operator_panel_access'),
+    path('api/warrant-master-panel/', warrant_master_panel_access, name='warrant_master_panel_access'),
+    path('api/super-admin-panel/', super_admin_panel_access, name='super_admin_panel_access'),
+    path('api/orders/master/available/', get_master_available_orders, name='get_master_available_orders'),
+      # Distance endpoints
+    path('api/distance/settings/', get_distance_settings, name='get_distance_settings'),
+    path('api/distance/settings/update/', update_distance_settings, name='update_distance_settings'),
+    path('api/distance/master/<int:master_id>/', get_master_distance_info, name='get_master_distance_info'),
+    path('api/distance/masters/all/', get_all_masters_distance, name='get_all_masters_distance'),    path('api/distance/orders/available/', get_master_available_orders_with_distance, name='get_master_available_orders_with_distance'),    path('api/distance/force-update/', force_update_all_masters_distance, name='force_update_all_masters_distance'),
+    path('api/distance/master/<int:master_id>/set/', set_master_distance_manually, name='set_master_distance_manually'),
+    path('api/distance/master/<int:master_id>/reset/', reset_master_distance_to_automatic, name='reset_master_distance_to_automatic'),
+    path('api/distance/master/orders/', get_master_distance_with_orders, name='get_master_distance_with_orders'),
+]

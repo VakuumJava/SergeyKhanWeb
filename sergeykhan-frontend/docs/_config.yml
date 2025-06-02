@@ -1,0 +1,20 @@
+# Основные настройки сайта
+title: "Мой Сайт"
+description: "Описание моего сайта"
+baseurl: "/sergeykhan"  # Если сайт разворачивается в подпапке, например, https://username.github.io/your-repo
+url: "https://bekjan777.github.io"  # Базовый URL сайта
+
+# Тема (если используется)
+theme: jekyll-theme-primer
+
+# Плагины (если нужны)
+plugins:
+  - jekyll-seo-tag
+
+# Настройки сборки
+markdown: kramdown
+permalink: pretty
+
+# Настройки для Sass/SCSS (если используете)
+sass:
+  style: compressed
