@@ -1,69 +1,51 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {LogsChart} from "@shared/finances/chart/myChart";
 import { HistoryPayments } from "@shared/finances/chartFinances/historyPayments";
-import {API} from "@shared/constants/constants";
+import { UniversalBalanceManager } from "@shared/balance/UniversalBalanceManager";
 
 const FinancesPage = () => {
-  const [balance, setBalance] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isVisible] = useState(true);
-  const userId : string | null = localStorage.getItem("user_id");
-  const currency = '₸';
+  const userId : string | null = typeof window !== "undefined" ? localStorage.getItem("user_id") : null;
 
-  useEffect(() => {
-    const fetchBalance = async () => {
-      try {
-        // const userId = localStorage.getItem("user_id");
-        const token = localStorage.getItem("token");
-
-        if (!userId || !token) {
-          throw new Error("Пользователь не авторизован");
-        }
-
-        const res = await fetch(`${API}/balance/${userId}/`, {
-          headers: {
-            Authorization: `Token ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!res.ok) {
-          throw new Error("Ошибка получения баланса");
-        }
-
-        const data = await res.json();
-        setBalance(data.balance);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchBalance();
-  }, []);
+  if (!userId) {
+    return (
+      <div className="w-full container">
+        <div className="flex items-center justify-center p-8">
+          <span className="text-red-500">Пользователь не авторизован</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full container">
-      <div className="flex items-center flex-col justify-center gap-14">
-        <div className="flex items-center justify-center flex-col">
-          <h1 className="text-2xl text-gray-400">Ваш баланс</h1>
-          {isLoading ? (
-            <span className="text-2xl text-gray-400">Загрузка...</span>
-          ) : error ? (
-            <span className="text-red-500">{error}</span>
-          ) : (
-            <span className="text-5xl font-bold">{balance} {currency}</span>
-          )}
+    <div className="w-full container mx-auto px-4 py-8">
+      <div className="space-y-8">
+        {/* Заголовок */}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Мои финансы</h1>
+          <p className="text-gray-600">Просмотр баланса и истории операций</p>
         </div>
 
-        <div className="w-[80%]">
+        {/* Карточки баланса */}
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h2 className="text-xl font-semibold mb-4">Баланс</h2>
+          <UniversalBalanceManager 
+            userId={userId}
+            readonly={true}
+            showControls={false}
+          />
+        </div>
+
+        {/* График активности */}
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h2 className="text-xl font-semibold mb-4">График операций</h2>
           <LogsChart visible={isVisible} />
         </div>
 
-        <div className="w-full">
+        {/* История операций */}
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h2 className="text-xl font-semibold mb-4">История операций</h2>
           <HistoryPayments userId={userId}/>
         </div>
       </div>
