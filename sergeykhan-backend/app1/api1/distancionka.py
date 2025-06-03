@@ -323,8 +323,9 @@ def get_master_available_orders_with_distance(request):
     
     orders = get_visible_orders_for_master(request.user.id)
     
-    from .serializers import OrderSerializer
-    serializer = OrderSerializer(orders, many=True)
+    # Используем публичный сериализатор для мастеров, которые еще не взяли заказ
+    from .serializers import OrderPublicSerializer
+    serializer = OrderPublicSerializer(orders, many=True)
     
     # Получаем информацию о дистанционке мастера
     master = request.user
@@ -442,18 +443,19 @@ def get_master_distance_with_orders(request):
     # Получаем видимые заказы с учетом дистанционки
     visible_orders = get_visible_orders_for_master(master_id)
     
-    # Сериализуем заказы
+    # Сериализуем заказы с публичной информацией (без apartment/entrance/phone)
     orders_data = []
     for order in visible_orders:
         orders_data.append({
             'id': order.id,
             'client_name': order.client_name,
-            'client_phone': order.client_phone,
             'description': order.description,
             'status': order.status,
-            'final_cost': str(order.final_cost) if order.final_cost else None,
+            'estimated_cost': str(order.estimated_cost) if order.estimated_cost else None,
             'created_at': order.created_at.isoformat() if order.created_at else None,
-            'address': getattr(order, 'address', None),
+            'public_address': order.get_public_address(),  # Только улица и дом
+            'street': order.street,
+            'house_number': order.house_number
         })
     
     # Получаем статистику мастера

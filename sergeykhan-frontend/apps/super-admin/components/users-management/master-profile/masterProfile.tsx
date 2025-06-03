@@ -10,6 +10,7 @@ import { OrdersDataTable } from "@shared/orders/(beta-orders)/OrdersTable";
 import {columns, Order} from "@shared/constants/orders";
 import { UniversalBalanceManager } from "@workspace/ui/components/shared";
 import { Button } from "@workspace/ui/components/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { MasterCalendar } from "@workspace/ui/components/master-calendar";
 import {
     Dialog,
@@ -101,8 +102,64 @@ const MasterProfile: React.FC<MasterProfileProps> = ({ id }) => {
     return (
         <div className="flex flex-col mt-5 gap-5">
             <h1 className="text-xl text-center md:text-2xl mb-5 font-bold">
-                Профиль мастера {master.name}
+                Профиль мастера: <span className="text-blue-600">{master.email}</span>
             </h1>
+
+            {/* Статистика мастера */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardDescription>
+                            Всего заказов
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{orders.length}</div>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardDescription>
+                            Заказы в работе
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">
+                            {orders.filter(order => order.status === 'in_progress').length}
+                        </div>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardDescription>
+                            Выполненные заказы
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">
+                            {orders.filter(order => order.status === 'completed').length}
+                        </div>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardDescription>
+                            Общий заработок
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">
+                            {orders
+                                .filter(order => order.status === 'completed')
+                                .reduce((sum, order) => sum + (order.payment_amount || 0), 0)
+                            } ₽
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
             {/* блок: баланс, лог, график */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
@@ -131,6 +188,7 @@ const MasterProfile: React.FC<MasterProfileProps> = ({ id }) => {
                         userRole="super_admin" 
                         readOnly={true}
                         showCreateButton={false}
+                        apiBaseUrl={API}
                     />
                 </div>
             </div>

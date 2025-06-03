@@ -3,14 +3,16 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "@shared/constants/constants";
-import { Master, } from "@shared/constants/types";
+import { Master } from "@shared/constants/types";
 import { HistoryPayments } from "@shared/finances/chartFinances/historyPayments";
 import { OrdersDataTable } from "@shared/orders/(beta-orders)/OrdersTable";
 import { columns, Order as OrderType  } from "@shared/constants/orders";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { MasterCalendar } from "@workspace/ui/components/master-calendar";
 import TokenSetter from "@/components/token-setter";
+import MasterDistanceTable from "./MasterDistanceTable";
 import {
     Dialog,
     DialogTrigger,
@@ -103,8 +105,64 @@ const MasterProfile: React.FC<MasterProfileProps> = ({ id }) => {
     return (
         <div className="flex flex-col mt-5 gap-5">
             <h1 className="text-xl text-center md:text-2xl mb-5 font-bold">
-                Профиль мастера {master.name}
+                Профиль мастера: <span className="text-blue-600">{master.email}</span>
             </h1>
+            
+            {/* Статистика мастера */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardDescription>
+                            Всего заказов
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{orders.length}</div>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardDescription>
+                            Заказы в работе
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">
+                            {orders.filter(order => order.status === 'in_progress').length}
+                        </div>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardDescription>
+                            Выполненные заказы
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">
+                            {orders.filter(order => order.status === 'completed').length}
+                        </div>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardDescription>
+                            Общий заработок
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">
+                            {orders
+                                .filter(order => order.status === 'completed')
+                                .reduce((sum, order) => sum + (order.master_payment || 0), 0)
+                            } ₸
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
             {/* блок: баланс, лог, график */}
             <div className="grid grid-cols-1 lg:grid-cols-1 gap-16 items-start">
@@ -137,8 +195,14 @@ const MasterProfile: React.FC<MasterProfileProps> = ({ id }) => {
                         userRole="curator" 
                         readOnly={true}
                         showCreateButton={false}
+                        apiBaseUrl={API}
                     />
                 </div>
+            </div>
+
+            {/* Таблица дистанции мастера */}
+            <div className="pt-5">
+                <MasterDistanceTable masterId={id} />
             </div>
 
             {/* Таблица заказов мастера */}

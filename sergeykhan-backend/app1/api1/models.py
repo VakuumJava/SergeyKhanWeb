@@ -83,12 +83,19 @@ class Order(models.Model):
         ('завершен', 'Завершен'),
     )
 
-
-
     client_name = models.CharField(max_length=255)
     client_phone = models.CharField(max_length=20)
     description = models.TextField()
-    address = models.CharField(max_length=255, null=True, blank=True)  # Добавляем адрес
+    
+    # Раздельные поля адреса
+    street = models.CharField(max_length=255, null=True, blank=True, verbose_name='Улица')
+    house_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='Номер дома')
+    apartment = models.CharField(max_length=50, null=True, blank=True, verbose_name='Квартира')
+    entrance = models.CharField(max_length=50, null=True, blank=True, verbose_name='Подъезд')
+    
+    # Объединенный адрес для обратной совместимости
+    address = models.CharField(max_length=255, null=True, blank=True)
+    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='новый')
     is_test = models.BooleanField(default=False)  # Поле для указания тестового заказа
 
@@ -124,8 +131,10 @@ class Order(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-    )
-
+    )    # Scheduling fields
+    scheduled_date = models.DateField(null=True, blank=True, verbose_name='Дата выполнения')
+    scheduled_time = models.TimeField(null=True, blank=True, verbose_name='Время выполнения')
+    
     estimated_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     final_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     expenses = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -133,7 +142,34 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order {self.id} - {self.client_name} ({self.status})"
-
+    
+    def get_full_address(self):
+        """Возвращает полный адрес со всеми деталями"""
+        parts = []
+        if self.street:
+            parts.append(self.street)
+        if self.house_number:
+            parts.append(self.house_number)
+        if self.apartment:
+            parts.append(f"кв. {self.apartment}")
+        if self.entrance:
+            parts.append(f"подъезд {self.entrance}")
+        return ", ".join(parts) if parts else self.address or ""
+    
+    def get_public_address(self):
+        """Возвращает публичный адрес без квартиры и подъезда (для мастеров до взятия заказа)"""
+        parts = []
+        if self.street:
+            parts.append(self.street)
+        if self.house_number:
+            parts.append(self.house_number)
+        return ", ".join(parts) if parts else ""
+    
+    def save(self, *args, **kwargs):
+        """Автоматически обновляем поле address при сохранении"""
+        if not self.address:
+            self.address = self.get_full_address()
+        super().save(*args, **kwargs)
 
 
 class IsCurator(permissions.BasePermission):
@@ -365,3 +401,59 @@ class TransactionLog(models.Model):
     
     def __str__(self):
         return f"{self.transaction_type} - {self.amount} - {self.user}"
+
+
+# Master Availability Model for scheduling
+class MasterAvailability(models.Model):
+    master = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        limit_choices_to={'role': 'master'},
+        related_name='availability_slots'
+    )
+    date = models.DateField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['date', 'start_time']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['master', 'date', 'start_time'], 
+                name='unique_master_availability'
+            )
+        ]
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.start_time and self.end_time and self.start_time >= self.end_time:
+            raise ValidationError("End time must be after start time")
+        
+        # Check for overlapping availability slots
+        if self.pk:
+            overlapping = MasterAvailability.objects.filter(
+                master=self.master,
+                date=self.date,
+            ).exclude(pk=self.pk).filter(
+                models.Q(start_time__lt=self.end_time) & 
+                models.Q(end_time__gt=self.start_time)
+            )
+        else:
+            overlapping = MasterAvailability.objects.filter(
+                master=self.master,
+                date=self.date,
+                start_time__lt=self.end_time,
+                end_time__gt=self.start_time
+            )
+        
+        if overlapping.exists():
+            raise ValidationError("This time slot overlaps with existing availability")
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.master.email} - {self.date} ({self.start_time}-{self.end_time})"

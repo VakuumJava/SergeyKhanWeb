@@ -8,9 +8,18 @@ interface Order {
   client_phone: string;
   description: string;
   address?: string;
+  // New address fields from backend
+  street?: string;
+  house_number?: string;
+  apartment?: string;
+  entrance?: string;
+  public_address?: string;  // Street + house number only (for masters before taking)
+  full_address?: string;    // Complete address including apartment/entrance (for taken orders)
   status: string;
-  estimated_cost?: number;
+  estimated_cost?: string;
+  final_cost?: string;  // Added final_cost field to match backend
   created_at: string;
+  assigned_master?: string | null;
 }
 
 interface DistanceInfo {

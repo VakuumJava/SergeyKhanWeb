@@ -9,14 +9,19 @@ const FinancesPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isVisible] = useState(true);
-  const userId : string | null = localStorage.getItem("user_id");
+  const [userId, setUserId] = useState<string | null>(null);
   const currency = '₸';
+
+  useEffect(() => {
+    // Get userId from localStorage only on client side
+    const userIdFromStorage = typeof window !== 'undefined' ? localStorage.getItem("user_id") : null;
+    setUserId(userIdFromStorage);
+  }, []);
 
   useEffect(() => {
     const fetchBalance = async () => {
       try {
-        // const userId = localStorage.getItem("user_id");
-        const token = localStorage.getItem("token");
+        const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null;
 
         if (!userId || !token) {
           throw new Error("Пользователь не авторизован");
@@ -42,8 +47,10 @@ const FinancesPage = () => {
       }
     };
 
-    fetchBalance();
-  }, []);
+    if (userId) {
+      fetchBalance();
+    }
+  }, [userId]);
 
   return (
     <div className="w-full container">

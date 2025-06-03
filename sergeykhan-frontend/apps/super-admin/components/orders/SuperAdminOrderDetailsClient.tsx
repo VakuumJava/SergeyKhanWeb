@@ -528,7 +528,7 @@ export default function SuperAdminOrderDetailsClient({ id }: Props) {
               <div>
                 <p className="text-sm font-medium text-green-800 dark:text-green-300">Стоимость заказа</p>
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {formatCurrency(order.final_cost)}
+                  {formatCurrency(Number(order.final_cost) || 0)}
                 </p>
               </div>
             </div>

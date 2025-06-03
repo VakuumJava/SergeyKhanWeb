@@ -3,6 +3,9 @@ import {Order} from "@shared/constants/orders";
 export type Master = {
     id: string;
     name: string;
+    first_name: string;
+    last_name: string;
+    email: string;
     balance: number;
     // orders: Order[];
 };
