@@ -124,7 +124,7 @@ class MasterAvailabilitySerializer(serializers.ModelSerializer):
     master_email = serializers.CharField(source='master.email', read_only=True)
     
     class Meta:
-        model = Order
+        model = MasterAvailability
         fields = '__all__'
 
 
@@ -142,9 +142,7 @@ class CompanyBalanceLogSerializer(serializers.ModelSerializer):
         model = CompanyBalanceLog
         fields = ['id', 'action_type', 'action_type_display', 'amount', 'reason', 
                  'performed_by', 'performed_by_email', 'old_value', 'new_value', 'created_at']
-        model = MasterAvailability
-        fields = '__all__'
-        read_only_fields = ('created_at', 'updated_at')
+        read_only_fields = ('created_at',)
 
 
 class MasterWorkloadSerializer(serializers.Serializer):
