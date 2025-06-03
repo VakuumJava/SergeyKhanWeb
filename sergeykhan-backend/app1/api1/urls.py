@@ -7,7 +7,11 @@ from .balance_views import (
     modify_balance,
     get_balance_logs_detailed,
     get_user_permissions,
-    get_all_balances
+    get_all_balances,
+    get_company_balance,
+    modify_company_balance,
+    get_company_balance_logs,
+    get_user_balance_detailed_for_super_admin
 )
 from .distancionka import (
     get_distance_settings,
@@ -103,8 +107,15 @@ urlpatterns = [
     path('api/distance/settings/', get_distance_settings, name='get_distance_settings'),
     path('api/distance/settings/update/', update_distance_settings, name='update_distance_settings'),
     path('api/distance/master/<int:master_id>/', get_master_distance_info, name='get_master_distance_info'),
-    path('api/distance/masters/all/', get_all_masters_distance, name='get_all_masters_distance'),    path('api/distance/orders/available/', get_master_available_orders_with_distance, name='get_master_available_orders_with_distance'),    path('api/distance/force-update/', force_update_all_masters_distance, name='force_update_all_masters_distance'),
-    path('api/distance/master/<int:master_id>/set/', set_master_distance_manually, name='set_master_distance_manually'),
+    path('api/distance/masters/all/', get_all_masters_distance, name='get_all_masters_distance'),    path('api/distance/orders/available/', get_master_available_orders_with_distance, name='get_master_available_orders_with_distance'),    path('api/distance/force-update/', force_update_all_masters_distance, name='force_update_all_masters_distance'),    path('api/distance/master/<int:master_id>/set/', set_master_distance_manually, name='set_master_distance_manually'),
     path('api/distance/master/<int:master_id>/reset/', reset_master_distance_to_automatic, name='reset_master_distance_to_automatic'),
     path('api/distance/master/orders/', get_master_distance_with_orders, name='get_master_distance_with_orders'),
+    
+    # Company balance endpoints (only for super-admin)
+    path('api/company-balance/', get_company_balance, name='get_company_balance'),
+    path('api/company-balance/modify/', modify_company_balance, name='modify_company_balance'),
+    path('api/company-balance/logs/', get_company_balance_logs, name='get_company_balance_logs'),
+    
+    # Universal balance endpoint for dashboard (returns company balance for super-admin, personal balance for others)
+    path('api/balance/<int:user_id>/dashboard/', get_user_balance_detailed_for_super_admin, name='get_user_balance_detailed_for_super_admin'),
 ]

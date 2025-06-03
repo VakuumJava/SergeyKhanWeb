@@ -245,6 +245,30 @@ class CompanyBalance(models.Model):
         return instance
 
 
+class CompanyBalanceLog(models.Model):
+    ACTION_TYPE_CHOICES = (
+        ('top_up', 'Пополнение'),
+        ('deduct', 'Списание'),
+    )
+    
+    action_type = models.CharField(max_length=10, choices=ACTION_TYPE_CHOICES, default='top_up')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    reason = models.TextField(default='')  # Причина изменения
+    performed_by = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='company_balance_changes_performed'
+    )
+    old_value = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    new_value = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Company Balance - {self.get_action_type_display()} - {self.amount}"
+
+
 class DistanceSettingsModel(models.Model):
     """Модель для хранения настроек дистанционки в базе данных"""
     
@@ -348,6 +372,7 @@ class TransactionLog(models.Model):
         ('master_payment', 'Выплата мастеру'),
         ('curator_salary', 'Зарплата куратору'),
         ('company_income', 'Доход компании'),
+        ('company_expense', 'Расход компании'),
     )
     
     user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)

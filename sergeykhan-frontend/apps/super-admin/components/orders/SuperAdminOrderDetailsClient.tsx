@@ -189,8 +189,8 @@ export default function SuperAdminOrderDetailsClient({ id }: Props) {
     }
 
     try {
-      // Try the original SuperAdmin endpoint first
-      let res = await fetch(`${API}/api/assign/${order.id}/`, {
+      // Use the correct endpoint pattern
+      const res = await fetch(`${API}/assign/${order.id}/`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -198,18 +198,6 @@ export default function SuperAdminOrderDetailsClient({ id }: Props) {
         },
         body: JSON.stringify({ assigned_master: masterIdNum }),
       });
-
-      // If that fails with 404, try the Master endpoint pattern
-      if (!res.ok && res.status === 404) {
-        res = await fetch(`${API}/assign/${order.id}/`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Token ${token}`,
-          },
-          body: JSON.stringify({ assigned_master: masterIdNum }),
-        });
-      }
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -301,18 +289,10 @@ export default function SuperAdminOrderDetailsClient({ id }: Props) {
     if (!order || !order.assigned_master) return;
     const token = localStorage.getItem("token");
     try {
-      // Try API endpoint first, then fallback to non-API
-      let res = await fetch(`${API}/api/assign/${order.id}/remove/`, {
+      const res = await fetch(`${API}/assign/${order.id}/remove/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
       });
-
-      if (!res.ok && res.status === 404) {
-        res = await fetch(`${API}/assign/${order.id}/remove/`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
-        });
-      }
 
       if (res.ok) {
         setOrder({ ...order, assigned_master: null } as Order);
