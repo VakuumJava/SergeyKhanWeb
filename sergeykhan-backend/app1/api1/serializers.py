@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Order, CustomUser, Balance, BalanceLog, CalendarEvent, Contact, OrderLog, TransactionLog
+from .models import Order, CustomUser, Balance, BalanceLog, CalendarEvent, Contact, OrderLog, TransactionLog, CompanyBalance, CompanyBalanceLog
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -99,3 +99,19 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = '__all__'
+
+
+class CompanyBalanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompanyBalance
+        fields = ['amount']
+
+
+class CompanyBalanceLogSerializer(serializers.ModelSerializer):
+    performed_by_email = serializers.CharField(source='performed_by.email', read_only=True)
+    action_type_display = serializers.CharField(source='get_action_type_display', read_only=True)
+    
+    class Meta:
+        model = CompanyBalanceLog
+        fields = ['id', 'action_type', 'action_type_display', 'amount', 'reason', 
+                 'performed_by', 'performed_by_email', 'old_value', 'new_value', 'created_at']

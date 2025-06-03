@@ -1,11 +1,7 @@
-import FinancesPage from "@shared/finances/financesPage";
+import {FinancesSuperAdmin} from '@workspace/ui/components/shared/finances/FinancesSuperAdmin';
 
 const Finances = () => {
-  return (
-    <div className="w-full">
-      <FinancesPage/>
-    </div>
-  )
-}
+  return <FinancesSuperAdmin />;
+};
 
-export default Finances
+export default Finances;

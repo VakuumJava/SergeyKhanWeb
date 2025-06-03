@@ -35,10 +35,6 @@ export const sidebar_items = [
                 url: "/users-management",
                 icon: Anvil,
             },{
-                title: "Управление балансами",
-                url: "/balance-management",
-                icon: Wallet,
-            },{
                 title: "Управление процентами",
                 url: "/percentages-management",
                 icon: Percent,

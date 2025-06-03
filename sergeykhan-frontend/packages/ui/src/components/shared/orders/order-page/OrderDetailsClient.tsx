@@ -116,7 +116,7 @@ export default function OrderDetailsClient({ id }: Props) {
     }
 
     Promise.all([
-      fetch(`${API}/orders/${id}`, {
+      fetch(`${API}/api/orders/${id}/detail/`, {
         headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
       }).then(async (res) => {
         if (!res.ok) throw new Error("Не удалось загрузить заказ");
