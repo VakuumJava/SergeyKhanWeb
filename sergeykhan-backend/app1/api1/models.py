@@ -1,7 +1,8 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager, Permission
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from rest_framework import serializers, viewsets, permissions
+from django.core.exceptions import ValidationError
+from decimal import Decimal
 import uuid
 
 
@@ -61,7 +62,7 @@ class CustomUser(AbstractUser):
     objects = CustomUserManager()
 
     def __str__(self):
-        return f"{self.username} ({self.role})"
+        return f"{self.email} ({self.role})"
 
 
 class Balance(models.Model):
@@ -80,7 +81,9 @@ class Order(models.Model):
         ('в обработке', 'В обработке'),
         ('назначен', 'Назначен мастеру'),
         ('выполняется', 'Выполняется'),
+        ('ожидает_подтверждения', 'Ожидает подтверждения'),  # Новый статус
         ('завершен', 'Завершен'),
+        ('отклонен', 'Отклонен'),  # Новый статус
     )
 
     client_name = models.CharField(max_length=255)
@@ -96,7 +99,7 @@ class Order(models.Model):
     # Объединенный адрес для обратной совместимости
     address = models.CharField(max_length=255, null=True, blank=True)
     
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='новый')
+    status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='новый')
     is_test = models.BooleanField(default=False)  # Поле для указания тестового заказа
 
     operator = models.ForeignKey(
@@ -159,8 +162,7 @@ class Order(models.Model):
     def get_public_address(self):
         """Возвращает публичный адрес без квартиры и подъезда (для мастеров до взятия заказа)"""
         parts = []
-        if self.street:
-            parts.append(self.street)
+        if self.street:        parts.append(self.street)
         if self.house_number:
             parts.append(self.house_number)
         return ", ".join(parts) if parts else ""
@@ -172,18 +174,14 @@ class Order(models.Model):
         super().save(*args, **kwargs)
 
 
-class IsCurator(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'curator'
+# Модель баланса пользователя
+class Balance(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='balance')
+    amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)  # Текущий баланс
+    paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)  # Выплаченная сумма за все время
 
-class IsOperator(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'operator'
-
-class IsMaster(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'master'
-
+    def __str__(self):
+        return f"Balance: {self.user.email} - Current: {self.amount}, Paid: {self.paid_amount}"
 
 
 class BalanceLog(models.Model):
@@ -326,12 +324,6 @@ class ProfitDistributionSettings(models.Model):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
-
-
-class CustomUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CustomUser
-        fields = ('email', 'role')
 
 
 
@@ -580,3 +572,105 @@ class MasterAvailability(models.Model):
     
     def __str__(self):
         return f"{self.master.email} - {self.date} ({self.start_time}-{self.end_time})"
+
+
+# Order Completion Model - новая модель для завершения заказов мастером
+class OrderCompletion(models.Model):
+    COMPLETION_STATUS_CHOICES = [
+        ('ожидает_проверки', 'Ожидает проверки'),
+        ('одобрен', 'Одобрен'),
+        ('отклонен', 'Отклонен'),
+    ]
+    
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='completion')
+    master = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, limit_choices_to={'role': 'master'})
+    
+    # Данные о завершении работы
+    work_description = models.TextField(verbose_name="Описание выполненных работ")
+    completion_photos = models.JSONField(default=list, blank=True, verbose_name="Фотографии выполненных работ")
+    
+    # Финансовые данные
+    parts_expenses = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Расходы на запчасти (₸)")
+    transport_costs = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Транспортные расходы (₸)")
+    total_received = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Полная сумма получена за заказ (₸)")
+    
+    # Автоматически рассчитываемые поля
+    total_expenses = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Общие расходы (₸)")
+    net_profit = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Чистая прибыль (₸)")
+    
+    # Даты и статус
+    completion_date = models.DateTimeField(verbose_name="Дата завершения")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+    status = models.CharField(max_length=20, choices=COMPLETION_STATUS_CHOICES, default='ожидает_проверки', verbose_name="Статус")
+    
+    # Проверка куратором
+    curator = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_completions', limit_choices_to={'role': 'curator'})
+    review_date = models.DateTimeField(null=True, blank=True, verbose_name="Дата проверки")
+    curator_notes = models.TextField(blank=True, null=True, verbose_name="Заметки куратора")
+    
+    # Распределение средств
+    is_distributed = models.BooleanField(default=False, verbose_name="Средства распределены")
+    
+    def save(self, *args, **kwargs):
+        # Автоматический расчет общих расходов и чистой прибыли
+        self.total_expenses = self.parts_expenses + self.transport_costs
+        self.net_profit = self.total_received - self.total_expenses
+        super().save(*args, **kwargs)
+    
+    def calculate_distribution(self):
+        """Рассчитывает распределение средств"""
+        if self.status != 'одобрен' or self.is_distributed:
+            return None
+            
+        # 60% мастеру + 30% на оплаченный баланс (30% сразу + 30% потом)
+        master_total = self.net_profit * Decimal('0.90')  # 60% + 30%
+        master_immediate = self.net_profit * Decimal('0.60')  # 60% сразу
+        master_deferred = self.net_profit * Decimal('0.30')   # 30% потом
+        
+        # 35% компании
+        company_share = self.net_profit * Decimal('0.35')
+        
+        # 5% куратору
+        curator_share = self.net_profit * Decimal('0.05')
+        
+        return {
+            'master_immediate': master_immediate,
+            'master_deferred': master_deferred,
+            'master_total': master_total,
+            'company_share': company_share,
+            'curator_share': curator_share
+        }
+    
+    class Meta:
+        verbose_name = "Завершение заказа"
+        verbose_name_plural = "Завершения заказов"
+    
+    def __str__(self):
+        return f"Завершение заказа {self.order.id} мастером {self.master.email if self.master else 'не указан'}"
+
+
+# Модель для логирования финансовых транзакций
+class FinancialTransaction(models.Model):
+    TRANSACTION_TYPES = [
+        ('order_completion', 'Завершение заказа'),
+        ('master_payment', 'Выплата мастеру'),
+        ('curator_payment', 'Выплата куратору'),
+        ('company_income', 'Доход компании'),
+        ('master_deferred', 'Отложенная выплата мастеру'),
+    ]
+    
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='transactions')
+    order_completion = models.ForeignKey(OrderCompletion, on_delete=models.CASCADE, related_name='transactions', null=True, blank=True)
+    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Финансовая транзакция"
+        verbose_name_plural = "Финансовые транзакции"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.get_transaction_type_display()} - {self.amount}₸"

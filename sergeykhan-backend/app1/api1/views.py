@@ -13,14 +13,15 @@ from django.db import models
 
 from decimal import Decimal, InvalidOperation
 
-from .models import Order, CustomUser, Balance, BalanceLog, ProfitDistribution, CalendarEvent, Contact, CompanyBalance, OrderLog, TransactionLog, MasterAvailability
+from .models import Order, CustomUser, Balance, BalanceLog, ProfitDistribution, CalendarEvent, Contact, CompanyBalance, OrderLog, TransactionLog, MasterAvailability, OrderCompletion, FinancialTransaction, CompanyBalanceLog
 from .serializers import (
     OrderSerializer,
     CustomUserSerializer,
     BalanceSerializer,
     BalanceLogSerializer, CalendarEventSerializer, ContactSerializer,
     OrderLogSerializer, TransactionLogSerializer, OrderDetailSerializer,
-    OrderPublicSerializer
+    OrderPublicSerializer, OrderCompletionSerializer, OrderCompletionCreateSerializer,
+    OrderCompletionReviewSerializer, FinancialTransactionSerializer, OrderCompletionDistributionSerializer
 )
 from .middleware import role_required, RolePermission
 
@@ -528,8 +529,7 @@ def get_master_available_orders(request):
     from .distancionka import get_visible_orders_for_master
     
     orders = get_visible_orders_for_master(request.user.id)
-    # Use OrderPublicSerializer to hide private info (apartment/entrance/phone)
-    serializer = OrderPublicSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True)
     return Response(serializer.data)
 
 
@@ -1740,954 +1740,317 @@ def get_master_available_orders(request):
     return Response(serializer.data)
 
 
+# ----------------------------------------
+#  Завершение заказов мастерами
+# ----------------------------------------
+
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def transfer_order_to_warranty_master(request, order_id):
+@role_required([ROLES['MASTER']])
+def complete_order(request, order_id):
+    """Завершение заказа мастером"""
     try:
         order = Order.objects.get(id=order_id)
-    except Order.DoesNotExist:
-        return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
-
-    # Проверяем права доступа - разрешаем передачу:
-    # 1. Назначенному мастеру (если есть)
-    # 2. Супер-администраторам, администраторам и кураторам в любое время
-    allowed_roles = [ROLES['SUPER_ADMIN'], 'admin', ROLES['CURATOR']]
-    is_assigned_master = order.assigned_master and request.user == order.assigned_master
-    is_admin_role = request.user.role in allowed_roles
-    
-    if not (is_assigned_master or is_admin_role):
-        return Response({
-            'error': 'Insufficient permissions. Only assigned master or administrators can transfer orders.',
-            'user_role': request.user.role,
-            'is_assigned_master': is_assigned_master
-        }, status=status.HTTP_403_FORBIDDEN)
-
-    try:
-        warranty_master_id = request.data['warranty_master_id']
-        warranty_master = CustomUser.objects.get(id=warranty_master_id, role='warrant-master')
-    except (KeyError, CustomUser.DoesNotExist):
-        return Response({'error': 'Valid warranty master ID required'}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Сохраняем старые значения для логирования
-    old_status = order.status
-    old_transferred_to = order.transferred_to.email if order.transferred_to else None
-    old_assigned_master = order.assigned_master
-
-    # Фиксация передачи
-    order.transferred_to = warranty_master
-    order.status = 'передан на гарантию'
-    order.save()
-
-    # Логируем передачу заказа
-    log_order_action(
-        order=order,
-        action='transferred',
-        performed_by=request.user,
-        description=f'Заказ #{order.id} передан гарантийному мастеру {warranty_master.email}',
-        old_value=f'Статус: {old_status}, Гарантийный мастер: {old_transferred_to}',
-        new_value=f'Статус: передан на гарантию, Гарантийный мастер: {warranty_master.email}'
-    )
-
-    # Применяем штраф только если был назначен мастер
-    fine_amount = Decimal('50.00')  # Размер штрафа за передачу на гарантию
-    fine_applied = Decimal('0.00')
-    
-    if old_assigned_master and fine_amount > 0:
-        master_balance, _ = Balance.objects.get_or_create(user=old_assigned_master, defaults={'amount': Decimal('0.00')})
-        old_balance = master_balance.amount
-        master_balance.amount -= fine_amount
-        master_balance.save()
-        fine_applied = fine_amount
-
-        # Логируем штраф в BalanceLog
-        BalanceLog.objects.create(
-            user=old_assigned_master,
-            action='fine_transfer',
-            amount=-fine_amount,
-        )
-
-        # Логируем штраф в TransactionLog
-        log_transaction(
-            user=old_assigned_master,
-            transaction_type='balance_deduct',
-            amount=fine_amount,
-            description=f'Штраф за передачу заказа #{order.id} на гарантию. Баланс: {old_balance} → {master_balance.amount}',
-            order=order,
-            performed_by=request.user
-        )
-
-    return Response({
-        'message': 'Order transferred to warranty master successfully',
-        'fine_applied': float(fine_applied),
-        'had_assigned_master': old_assigned_master is not None,
-        'transferred_by': request.user.email,
-        'transferred_by_role': request.user.role
-    }, status=200)
-
-
-@api_view(['GET'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def get_transferred_orders(request):
-    orders = Order.objects.filter(transferred_to=request.user).order_by('-id')
-    data = [{
-        'id': o.id,
-        'description': o.description,
-        'final_cost': str(o.final_cost),
-        'status': o.status,
-        'expenses': str(o.expenses),
-        'original_master': o.master.username
-    } for o in orders]
-
-    return Response({'orders': data}, status=200)
-
-
-@api_view(['POST'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def complete_transferred_order(request, order_id):
-    try:
-        order = Order.objects.get(id=order_id, transferred_to=request.user, status__in=['передан на гарантию', 'выполняется'])
-    except Order.DoesNotExist:
-        return Response({'error': 'Order not found or access denied'}, status=404)
-
-    try:
-        final_cost = Decimal(str(request.data['final_cost']))
-        expenses = Decimal(str(request.data['expenses']))
-    except (KeyError, InvalidOperation):
-        return Response({'error': 'Invalid cost/expenses'}, status=400)
-
-    # Сохраняем старые значения для логирования
-    old_status = order.status
-    old_final_cost = order.final_cost
-    old_expenses = order.expenses
-
-    order.final_cost = final_cost
-    order.expenses = expenses
-    order.status = 'завершен гарантийным'
-    order.save()
-
-    # Логируем завершение заказа
-    log_order_action(
-        order=order,
-        action='completed',
-        performed_by=request.user,
-        description=f'Заказ #{order.id} завершен гарантийным мастером {request.user.email}',
-        old_value=f'Статус: {old_status}, Стоимость: {old_final_cost}, Расходы: {old_expenses}',
-        new_value=f'Статус: завершен гарантийным, Стоимость: {final_cost}, Расходы: {expenses}'
-    )
-
-    # Логируем финансовую операцию если есть расходы
-    if expenses > 0:
-        log_transaction(
-            user=request.user,
-            transaction_type='master_payment',
-            amount=expenses,
-            description=f'Расходы гарантийного мастера по заказу #{order.id}',
-            order=order,
-            performed_by=request.user
-        )
-
-    return Response({'message': 'Order marked as completed by warranty master'}, status=200)
-
-
-@api_view(['POST'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def approve_completed_order(request, order_id):
-    if request.user.role not in ['admin', 'super-admin', 'curator']:
-        return Response({'error': 'Only admin can approve orders'}, status=403)
-
-    try:
-        order = Order.objects.get(id=order_id, status__in=['завершен', 'завершен гарантийным'])
-    except Order.DoesNotExist:
-        return Response({'error': 'Order not found or not completed'}, status=404)
-
-    if not order.final_cost or not order.expenses:
-        return Response({'error': 'Order must have final cost and expenses to distribute profit'}, status=400)
-
-    # Сохраняем старый статус для логирования
-    old_status = order.status
-    order.status = 'одобрен'
-    order.save()
-
-    # Логируем одобрение заказа
-    log_order_action(
-        order=order,
-        action='approved',
-        performed_by=request.user,
-        description=f'Заказ #{order.id} одобрен администратором {request.user.email}',
-        old_value=f'Статус: {old_status}',
-        new_value='Статус: одобрен'
-    )
-
-    distribution = ProfitDistribution.objects.first()
-    profit = order.final_cost - order.expenses
-    profit = max(profit, 0)
-
-    master = order.transferred_to or order.assigned_master
-
-    # Расчёт долей
-    master_share = profit * Decimal(distribution.master_percent) / 100
-    curator_share = profit * Decimal(distribution.curator_percent) / 100 if order.curator else 0
-    operator_share = profit * Decimal(distribution.operator_percent) / 100 if order.operator else 0
-
-    # Распределяем выплаты и логируем
-    for user, amount, action, role in [
-        (master, master_share, 'earn_master', 'мастеру'),
-        (order.curator, curator_share, 'earn_curator', 'куратору'),
-        (order.operator, operator_share, 'earn_operator', 'оператору'),
-    ]:
-        if user and amount > 0:
-            balance, _ = Balance.objects.get_or_create(user=user, defaults={'amount': Decimal('0.00')})
-            old_balance = balance.amount
-            balance.amount += amount
-            balance.save()
+        
+        # Проверяем, что заказ назначен текущему мастеру
+        if order.assigned_master != request.user:
+            return Response({
+                'error': 'Заказ не назначен вам'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Проверяем статус заказа
+        if order.status not in ['выполняется', 'назначен']:
+            return Response({
+                'error': 'Заказ должен быть в статусе "выполняется" или "назначен"'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Проверяем, что заказ еще не завершен
+        if hasattr(order, 'completion'):
+            return Response({
+                'error': 'Заказ уже имеет запись о завершении'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Подготавливаем данные с файлами
+        data = request.data.copy()
+        
+        # Получаем загружаемые фотографии
+        completion_photos = request.FILES.getlist('completion_photos')
+        if completion_photos:
+            data['completion_photos'] = completion_photos
+        
+        # Создаем сериализатор
+        serializer = OrderCompletionCreateSerializer(data=data, context={'request': request})
+        
+        if serializer.is_valid():
+            completion = serializer.save()
             
-            # Логируем в BalanceLog
-            BalanceLog.objects.create(user=user, action=action, amount=amount)
-            
-            # Логируем в TransactionLog
-            log_transaction(
-                user=user,
-                transaction_type='profit_distribution',
-                amount=amount,
-                description=f'Выплата {role} за заказ #{order.id}. Баланс: {old_balance} → {balance.amount}',
+            # Логируем действие
+            log_order_action(
                 order=order,
-                performed_by=request.user
+                action='completed_by_master',
+                performed_by=request.user,
+                description=f'Заказ завершен мастером. Ожидает подтверждения куратора',
+                old_value=f'Статус: {order.status}',
+                new_value='Статус: ожидает_подтверждения'
             )
-
-    return Response({'message': 'Order approved and earnings distributed'}, status=200)
-
-
-@api_view(['GET'])
-def get_orders_by_master(request, master_id):
-    """Get orders by master id"""
-    master = CustomUser.objects.get(id=master_id)
-    orders = Order.objects.filter(assigned_master=master)
-    # Use OrderDetailSerializer to show full address and details for taken orders
-    serializer = OrderDetailSerializer(orders, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-@api_view(['POST'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def fine_master(request):
-    master_id = request.data.get('master_id')
-    amount = Decimal(request.data.get('amount', 0))
-    reason = request.data.get('reason', 'Штраф от куратора')
-
-    try:
-        master = CustomUser.objects.get(id=master_id, role='master')
-    except CustomUser.DoesNotExist:
-        return Response({'error': 'Invalid master ID'}, status=400)
-
-    balance, _ = Balance.objects.get_or_create(user=master, defaults={'amount': Decimal('0.00')})
-    if balance.amount < amount:
-        return Response({'error': 'Insufficient balance'}, status=400)
-
-    old_balance = balance.amount
-    balance.amount -= amount
-    balance.save()
-
-    # Логируем в BalanceLog
-    BalanceLog.objects.create(
-        user=master,
-        action='fine_by_curator',
-        amount=-amount,
-        details=f'Fine by curator {request.user.email}: {reason}'
-    )
-
-    # Логируем в TransactionLog
-    log_transaction(
-        user=master,
-        transaction_type='balance_deduct',
-        amount=amount,
-        description=f'Штраф от куратора {request.user.email}: {reason}. Баланс: {old_balance} → {balance.amount}',
-        performed_by=request.user
-    )
-
-    return Response({'message': f'Master {master_id} fined by {amount}'}, status=200)
-
-
-@api_view(['GET', 'PUT'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def profit_distribution(request):
-    dist = ProfitDistribution.objects.first()
-    if not dist:
-        dist = ProfitDistribution.objects.create()
-
-    if request.method == 'GET':
-        return Response({
-            'master_percent': dist.master_percent,
-            'curator_percent': dist.curator_percent,
-            'operator_percent': dist.operator_percent,
-            'kassa_percent': dist.kassa
-        })
-
-    elif request.method == 'PUT':
-        for field in ['master_percent', 'curator_percent', 'operator_percent', 'kassa']:
-            if field in request.data:
-                setattr(dist, field, request.data[field])
-
-        total = sum([
-            dist.master_percent,
-            dist.curator_percent,
-            dist.operator_percent,
-            dist.kassa
-        ])
-
-        if total != 100:
-            return Response({'error': 'Sum of percentages must be 100'}, status=400)
-
-        dist.save()
-        return Response({'message': 'Profit distribution updated'})
+            
+            return Response(OrderCompletionSerializer(completion).data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    except Order.DoesNotExist:
+        return Response({'error': 'Заказ не найден'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def get_balance_with_history(request, user_id):
-    logs = BalanceLog.objects.filter(user_id=user_id).order_by('created_at')
-    balance = Decimal(0)
-    history = []
-
-    for log in logs:
-        balance += log.amount
-        history.append({
-            'action': log.action,
-            'amount': str(log.amount),
-            'balance': str(balance),
-            'created_at': log.created_at
-        })
-
-    return Response({
-        'current_balance': str(balance),
-        'history': history
-    })
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_my_events(request):
-    """
-    GET /mine/
-    Returns all events for the authenticated user.
-    """
-    events = CalendarEvent.objects.filter(master=request.user)
-    serializer = CalendarEventSerializer(events, many=True)
+@role_required([ROLES['MASTER']])
+def get_master_completions(request):
+    """Получение списка завершений заказов мастера"""
+    completions = OrderCompletion.objects.filter(master=request.user).order_by('-created_at')
+    serializer = OrderCompletionSerializer(completions, many=True)
     return Response(serializer.data)
 
 
-@api_view(['POST'])
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def create_event(request):
-    """
-    POST /create/
-    Creates a new event. Expects title, start, end, color (optional) in body.
-    """
-    serializer = CalendarEventSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save(master=request.user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+@role_required([ROLES['CURATOR']])
+def get_pending_completions(request):
+    """Получение списка завершений, ожидающих подтверждения"""
+    completions = OrderCompletion.objects.filter(status='ожидает_проверки').order_by('-created_at')
+    serializer = OrderCompletionSerializer(completions, many=True)
+    return Response(serializer.data)
 
 
-@api_view(['PUT'])
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def update_event_time(request, event_id):
-    """
-    PUT /update/{event_id}/
-    Updates start/end of an existing event (used for drag/resize).
-    """
+@role_required([ROLES['CURATOR']])
+def get_completion_detail(request, completion_id):
+    """Получение детальной информации о завершении заказа"""
     try:
-        event = CalendarEvent.objects.get(id=event_id, master=request.user)
-    except CalendarEvent.DoesNotExist:
-        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-    data = {}
-    if 'start' in request.data:
-        data['start'] = request.data['start']
-    if 'end' in request.data:
-        data['end'] = request.data['end']
-
-    serializer = CalendarEventSerializer(event, data=data, partial=True)
-    if serializer.is_valid():
-        serializer.save()
+        completion = OrderCompletion.objects.get(id=completion_id)
+        serializer = OrderCompletionSerializer(completion)
         return Response(serializer.data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def delete_event(request, event_id):
-    """
-    DELETE /delete/{event_id}/
-    Deletes an event after user confirmation.
-    """
-    try:
-        event = CalendarEvent.objects.get(id=event_id, master=request.user)
-    except CalendarEvent.DoesNotExist:
-        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-    event.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
-
-@api_view(['GET'])
-def get_all_contacts(request):
-    contacts = Contact.objects.all()
-    serializer = ContactSerializer(contacts, many=True)
-    return Response(serializer.data)
+        
+    except OrderCompletion.DoesNotExist:
+        return Response({'error': 'Запись о завершении не найдена'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['POST'])
-def create_contact(request):
-    serializer = ContactSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['DELETE'])
-def delete_contact(request, contact_id):
-    try:
-        contact = Contact.objects.get(id=contact_id)
-        contact.delete()
-        return Response({'detail': 'Удалено успешно'}, status=status.HTTP_204_NO_CONTENT)
-    except Contact.DoesNotExist:
-        return Response({'detail': 'Контакт не найден'}, status=status.HTTP_404_NOT_FOUND)
-
-
-@api_view(['POST'])
-def mark_as_called(request, contact_id):
-    try:
-        contact = Contact.objects.get(id=contact_id)
-        contact.status = 'обзвонен'
-        contact.save()
-        serializer = ContactSerializer(contact)
-        return Response(serializer.data)
-    except Contact.DoesNotExist:
-        return Response({'detail': 'Контакт не найден'}, status=status.HTTP_404_NOT_FOUND)
-
-
-@api_view(['GET'])
-def get_called_contacts(request):
-    contacts = Contact.objects.filter(status='обзвонен')
-    serializer = ContactSerializer(contacts, many=True)
-    return Response(serializer.data)
-
-
-@api_view(['GET'])
-def get_uncalled_contacts(request):
-    contacts = Contact.objects.filter(status='не обзвонен')
-    serializer = ContactSerializer(contacts, many=True)
-    return Response(serializer.data)
-
-
-@api_view(['GET'])
-def get_guaranteed_orders(request, master_id):
-    try:
-        master = CustomUser.objects.get(id=master_id)
-    except CustomUser.DoesNotExist:
-        return Response({'error': 'Мастер не найден'}, status=404)
-
-    orders = Order.objects.filter(transferred_to=master)
-    serializer = OrderSerializer(orders, many=True)
-    return Response(serializer.data)
-
-
-@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def get_all_guaranteed_orders(request):
-    orders = Order.objects.filter(transferred_to__isnull=False)
-    serializer = OrderSerializer(orders, many=True)
-    return Response(serializer.data)
+@role_required([ROLES['CURATOR']])
+def review_completion(request, completion_id):
+    """Проверка завершения заказа куратором"""
+    try:
+        completion = OrderCompletion.objects.get(id=completion_id)
+        
+        # Проверяем статус
+        if completion.status != 'ожидает_проверки':
+            return Response({
+                'error': 'Завершение уже проверено'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = OrderCompletionReviewSerializer(completion, data=request.data, context={'request': request})
+        
+        if serializer.is_valid():
+            action = serializer.validated_data.get('action')
+            completion = serializer.save()
+            
+            # Логируем действие
+            action_type = 'completion_approved' if completion.status == 'одобрен' else 'completion_rejected'
+            log_order_action(
+                order=completion.order,
+                action=action_type,
+                performed_by=request.user,
+                description=f'Завершение заказа {completion.status} куратором',
+                old_value='ожидает_проверки',
+                new_value=completion.status
+            )
+            
+            # Если одобрено, распределяем средства
+            result_data = OrderCompletionSerializer(completion).data
+            if completion.status == 'одобрен':
+                distribution = distribute_completion_funds(completion, request.user)
+                if distribution:
+                    result_data.update({
+                        'master_payment': distribution.get('master_amount', 0),
+                        'curator_payment': distribution.get('curator_amount', 0),
+                        'company_payment': distribution.get('company_amount', 0)
+                    })
+            
+            return Response(result_data)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    except OrderCompletion.DoesNotExist:
+        return Response({'error': 'Запись о завершении не найдена'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['GET'])
+@authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def get_all_warranty_masters(request):
-    warranty_masters = CustomUser.objects.filter(role='warranty_master')
-    serializer = CustomUserSerializer(warranty_masters, many=True)
-    return Response(serializer.data)
+@role_required([ROLES['CURATOR'], ROLES['SUPER_ADMIN']])
+def get_completion_distribution(request, completion_id):
+    """Просмотр расчета распределения средств"""
+    try:
+        completion = OrderCompletion.objects.get(id=completion_id)
+        distribution = completion.calculate_distribution()
+        
+        if distribution:
+            distribution['net_profit'] = completion.net_profit
+            serializer = OrderCompletionDistributionSerializer(distribution)
+            return Response(serializer.data)
+        else:
+            return Response({'error': 'Распределение недоступно'}, status=status.HTTP_400_BAD_REQUEST)
+            
+    except OrderCompletion.DoesNotExist:
+        return Response({'error': 'Запись о завершении не найдена'}, status=status.HTTP_404_NOT_FOUND)
 
 
-
-from django.db import transaction
-
-
-def distribute_profits(order: Order):
-    if order.final_cost is None or order.final_cost <= 0:
-        raise ValueError("Order must have a valid final cost for distribution.")
-
-    if not order.transferred_to or not order.curator:
-        raise ValueError("Order must be assigned to a warranty master and a curator.")
-
-    master = order.transferred_to
-    curator = order.curator
-    total = order.final_cost
-
-    dist = ProfitDistribution.objects.first()
-    cash_percent = dist.master_percent // 2 if dist else 30
-    balance_percent = dist.master_percent // 2 if dist else 30
-    curator_percent = dist.curator_percent if dist else 5
-    kassa_percent = dist.kassa if dist else 35
-
-    cash_amount = (Decimal(cash_percent) / 100) * total
-    balance_amount = (Decimal(balance_percent) / 100) * total
-    curator_salary = (Decimal(curator_percent) / 100) * total
-    kassa_amount = (Decimal(kassa_percent) / 100) * total
-
-    with transaction.atomic():
-        # Update master's balance
-        master_balance, _ = Balance.objects.get_or_create(user=master)
-        master_balance.amount += balance_amount
+def distribute_completion_funds(completion, curator):
+    """Распределение средств после одобрения завершения"""
+    if completion.is_distributed:
+        return {
+            'master_amount': 0,
+            'curator_amount': 0,
+            'company_amount': 0,
+        }
+    
+    distribution = completion.calculate_distribution()
+    if not distribution:
+        return {
+            'master_amount': 0,
+            'curator_amount': 0,
+            'company_amount': 0,
+        }
+    
+    try:
+        # 1. Выплата мастеру (60% сразу)
+        master_balance, created = Balance.objects.get_or_create(user=completion.master)
+        old_master_balance = master_balance.amount
+        master_balance.amount += distribution['master_immediate']
         master_balance.save()
-
-        # Log master income
-        BalanceLog.objects.create(user=master, action="Начисление на баланс (30%)", amount=balance_amount)
-        BalanceLog.objects.create(user=master, action="Наличные (30%)", amount=cash_amount)
-
-        # Log curator salary
-        BalanceLog.objects.create(user=curator, action="Зарплата за заказ (5%)", amount=curator_salary)
-
-        # Update kassa
-        kassa = CompanyBalance.get_instance()
-        kassa.amount += kassa_amount
-        kassa.save()
-
-    return {
-        "cash_to_master": round(cash_amount, 2),
-        "balance_to_master": round(balance_amount, 2),
-        "curator_salary": round(curator_salary, 2),
-        "retained_by_company": round(kassa_amount, 2),
-    }
-
-
-@api_view(['POST'])
-def distribute_order_profit(request, order_id):
-    try:
-        order = Order.objects.get(id=order_id)
-        result = distribute_profits(order)
-        return Response({"status": "success", "distribution": result}, status=status.HTTP_200_OK)
-    except Order.DoesNotExist:
-        return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
-    except ValueError as ve:
-        return Response({"error": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Логируем транзакцию мастера
+        FinancialTransaction.objects.create(
+            user=completion.master,
+            order_completion=completion,
+            transaction_type='master_payment',
+            amount=distribution['master_immediate'],
+            description=f'Выплата за завершение заказа #{completion.order.id}'
+        )
+        
+        # Логируем изменение баланса мастера
+        BalanceLog.objects.create(
+            user=completion.master,
+            action_type='top_up',  # Используем правильный action_type
+            amount=distribution['master_immediate'],
+            reason=f'Выплата за заказ #{completion.order.id}',
+            performed_by=curator,
+            old_value=old_master_balance,
+            new_value=master_balance.amount
+        )
+        
+        # 2. Отложенная выплата мастеру (30% на будущее)
+        FinancialTransaction.objects.create(
+            user=completion.master,
+            order_completion=completion,
+            transaction_type='master_deferred',
+            amount=distribution['master_deferred'],
+            description=f'Отложенная выплата за заказ #{completion.order.id}'
+        )
+        
+        # 3. Выплата куратору (5%)
+        curator_balance, created = Balance.objects.get_or_create(user=curator)
+        old_curator_balance = curator_balance.amount
+        curator_balance.amount += distribution['curator_share']
+        curator_balance.save()
+        
+        FinancialTransaction.objects.create(
+            user=curator,
+            order_completion=completion,
+            transaction_type='curator_payment',
+            amount=distribution['curator_share'],
+            description=f'Выплата куратору за одобрение заказа #{completion.order.id}'
+        )
+        
+        BalanceLog.objects.create(
+            user=curator,
+            action_type='top_up',  # Используем правильный action_type
+            amount=distribution['curator_share'],
+            reason=f'Выплата за проверку заказа #{completion.order.id}',
+            performed_by=curator,
+            old_value=old_curator_balance,
+            new_value=curator_balance.amount
+        )
+        
+        # 4. Доход компании (35%)
+        company_balance = CompanyBalance.objects.first()
+        if company_balance:
+            old_company_balance = company_balance.amount
+            company_balance.amount += distribution['company_share']
+            company_balance.save()
+            
+            CompanyBalanceLog.objects.create(
+                action_type='top_up',  # Используем правильный action_type
+                amount=distribution['company_share'],
+                reason=f'Доход от завершения заказа #{completion.order.id}',
+                performed_by=curator,
+                old_value=old_company_balance,
+                new_value=company_balance.amount
+            )
+        
+        FinancialTransaction.objects.create(
+            user=curator,  # Записываем на куратора как инициатора
+            order_completion=completion,
+            transaction_type='company_income',
+            amount=distribution['company_share'],
+            description=f'Доход компании от заказа #{completion.order.id}'
+        )
+        
+        # Отмечаем как распределено
+        completion.is_distributed = True
+        completion.save()
+        
+        # Возвращаем информацию о распределенных средствах
+        return {
+            'master_amount': distribution['master_immediate'],
+            'curator_amount': distribution['curator_share'],
+            'company_amount': distribution['company_share'],
+        }
+        
     except Exception as e:
-        return Response({"error": "Unexpected error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-# Эндпоинт для валидации роли пользователя
-@api_view(['GET'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def validate_user_role(request):
-    """Возвращает информацию о роли пользователя"""
-    return Response({
-        'user_id': request.user.id,
-        'email': request.user.email,
-        'role': request.user.role,
-        'is_valid': True
-    })
-
-# Защищенные эндпоинты для панели мастера
-@api_view(['GET'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def master_panel_access(request):
-    """Доступ к панели мастера - только для мастеров"""
-    if request.user.role != ROLES['MASTER']:
-        return Response({
-            'error': 'Доступ запрещен. Панель доступна только для мастеров.',
-            'user_role': request.user.role,
-            'required_role': ROLES['MASTER']
-        }, status=403)
-    
-    return Response({
-        'message': 'Добро пожаловать в панель мастера',
-        'user_role': request.user.role
-    })
-
-# Защищенные эндпоинты для панели куратора
-@api_view(['GET']) 
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def curator_panel_access(request):
-    """Доступ к панели куратора - только для кураторов"""
-    if request.user.role != ROLES['CURATOR']:
-        return Response({
-            'error': 'Доступ запрещен. Панель доступна только для кураторов.',
-            'user_role': request.user.role,
-            'required_role': ROLES['CURATOR']
-        }, status=403)
-        
-    return Response({
-        'message': 'Добро пожаловать в панель куратора',
-        'user_role': request.user.role
-    })
-
-# Защищенные эндпоинты для панели оператора
-@api_view(['GET'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated]) 
-def operator_panel_access(request):
-    """Доступ к панели оператора - только для операторов"""
-    if request.user.role != ROLES['OPERATOR']:
-        return Response({
-            'error': 'Доступ запрещен. Панель доступна только для операторов.',
-            'user_role': request.user.role,
-            'required_role': ROLES['OPERATOR']
-        }, status=403)
-        
-    return Response({
-        'message': 'Добро пожаловать в панель оператора',
-        'user_role': request.user.role
-    })
-
-# Защищенные эндпоинты для панели гарантийного мастера
-@api_view(['GET'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def warrant_master_panel_access(request):
-    """Доступ к панели гарантийного мастера - только для гарантийных мастеров"""
-    if request.user.role != ROLES['WARRANT_MASTER']:
-        return Response({
-            'error': 'Доступ запрещен. Панель доступна только для гарантийных мастеров.',
-            'user_role': request.user.role,
-            'required_role': ROLES['WARRANT_MASTER']
-        }, status=403)
-        
-    return Response({
-        'message': 'Добро пожаловать в панель гарантийного мастера',
-        'user_role': request.user.role
-    })
-
-# Защищенные эндпоинты для панели супер-администратора
-@api_view(['GET'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def super_admin_panel_access(request):
-    """Доступ к панели супер-администратора - только для супер-администраторов"""
-    if request.user.role != ROLES['SUPER_ADMIN']:
-        return Response({
-            'error': 'Доступ запрещен. Панель доступна только для супер-администраторов.',
-            'user_role': request.user.role,
-            'required_role': ROLES['SUPER_ADMIN']
-        }, status=403)
-        
-    return Response({
-        'message': 'Добро пожаловать в панель супер-администратора',
-        'user_role': request.user.role
-    })
-
-# ----------------------------------------
-#  Новые эндпоинты для логирования
-# ----------------------------------------
-
-@api_view(['GET'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def get_order_logs(request, order_id):
-    """
-    Получить логи для конкретного заказа
-    """
-    try:
-        order = Order.objects.get(id=order_id)
-        logs = OrderLog.objects.filter(order=order).order_by('-created_at')
-        serializer = OrderLogSerializer(logs, many=True)
-        return Response(serializer.data)
-    except Order.DoesNotExist:
-        return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+        # В случае ошибки логируем
+        log_order_action(
+            order=completion.order,
+            action='distribution_error',
+            performed_by=curator,
+            description=f'Ошибка распределения средств: {str(e)}'
+        )
+        raise
 
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def get_all_order_logs(request):
-    """
-    Получить все логи заказов (с пагинацией)
-    """
-    page = int(request.GET.get('page', 1))
-    limit = int(request.GET.get('limit', 50))
-    offset = (page - 1) * limit
-    
-    logs = OrderLog.objects.all().order_by('-created_at')[offset:offset + limit]
-    total_count = OrderLog.objects.count()
-    
-    serializer = OrderLogSerializer(logs, many=True)
-    
-    return Response({
-        'logs': serializer.data,
-        'total_count': total_count,
-        'page': page,
-        'limit': limit,
-        'has_next': offset + limit < total_count
-    })
-
-
-@api_view(['GET'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def get_transaction_logs(request, user_id=None):
-    """
-    Получить логи транзакций для пользователя или все
-    """
-    if user_id:
-        try:
-            user = CustomUser.objects.get(id=user_id)
-            logs = TransactionLog.objects.filter(user=user).order_by('-created_at')
-        except CustomUser.DoesNotExist:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-    else:
-        # Все логи транзакций (только для администраторов)
-        if request.user.role not in ['super-admin', 'admin']:
-            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
-        logs = TransactionLog.objects.all().order_by('-created_at')
-    
-    page = int(request.GET.get('page', 1))
-    limit = int(request.GET.get('limit', 50))
-    offset = (page - 1) * limit
-    
-    paginated_logs = logs[offset:offset + limit]
-    total_count = logs.count()
-    
-    serializer = TransactionLogSerializer(paginated_logs, many=True)
-    
-    return Response({
-        'logs': serializer.data,
-        'total_count': total_count,
-        'page': page,
-        'limit': limit,
-        'has_next': offset + limit < total_count
-    })
-
-
-@api_view(['GET'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def get_order_detail(request, order_id):
-    """
-    Получить детальную информацию о заказе с email-адресами
-    """
-    try:
-        order = Order.objects.get(id=order_id)
-        serializer = OrderDetailSerializer(order)
-        return Response(serializer.data)
-    except Order.DoesNotExist:
-        return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
-
-
-# ----------------------------------------
-#  Улучшенные эндпоинты для гарантийных мастеров
-# ----------------------------------------
-
-@api_view(['GET'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def get_warranty_masters(request):
-    """
-    Получить список всех гарантийных мастеров
-    """
-    warranty_masters = CustomUser.objects.filter(role='warrant-master')
-    serializer = CustomUserSerializer(warranty_masters, many=True)
+def get_financial_transactions(request):
+    """Получение финансовых транзакций пользователя"""
+    transactions = FinancialTransaction.objects.filter(user=request.user).order_by('-created_at')
+    serializer = FinancialTransactionSerializer(transactions, many=True)
     return Response(serializer.data)
 
 
-@api_view(['POST'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def complete_warranty_order(request, order_id):
-    """
-    Завершение заказа гарантийным мастером с логированием
-    """
-    try:
-        order = Order.objects.get(id=order_id, transferred_to=request.user)
-    except Order.DoesNotExist:
-        return Response({'error': 'Order not found or access denied'}, status=status.HTTP_404_NOT_FOUND)
-
-    try:
-        final_cost = Decimal(str(request.data.get('final_cost', 0)))
-        expenses = Decimal(str(request.data.get('expenses', 0)))
-        completion_notes = request.data.get('completion_notes', '')
-    except (InvalidOperation, TypeError):
-        return Response({'error': 'Invalid cost/expenses format'}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Сохраняем старые значения
-    old_status = order.status
-    old_final_cost = order.final_cost
-    old_expenses = order.expenses
-
-    # Обновляем заказ
-    order.final_cost = final_cost
-    order.expenses = expenses
-    order.status = 'завершен гарантийным'
-    order.save()
-
-    # Логируем завершение
-    log_order_action(
-        order=order,
-        action='completed',
-        performed_by=request.user,
-        description=f'Заказ #{order.id} завершен гарантийным мастером {request.user.email}. {completion_notes}',
-        old_value=f'Статус: {old_status}, Стоимость: {old_final_cost}, Расходы: {old_expenses}',
-        new_value=f'Статус: завершен гарантийным, Стоимость: {final_cost}, Расходы: {expenses}'
-    )
-
-    # Логируем финансовую операцию если есть расходы
-    if expenses > 0:
-        log_transaction(
-            user=request.user,
-            transaction_type='master_payment',
-            amount=expenses,
-            description=f'Расходы гарантийного мастера по заказу #{order.id}: {completion_notes}',
-            order=order,
-            performed_by=request.user
-        )
-
-    return Response({
-        'message': 'Order completed by warranty master',
-        'order_id': order.id,
-        'final_cost': float(final_cost),
-        'expenses': float(expenses)
-    }, status=status.HTTP_200_OK)
-
-
-@api_view(['POST'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def approve_warranty_order(request, order_id):
-    """
-    Одобрение завершенного гарантийного заказа администратором
-    """
-    if request.user.role not in ['super-admin', 'admin', 'curator']:
-        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
-
-    try:
-        order = Order.objects.get(id=order_id, status='завершен гарантийным')
-    except Order.DoesNotExist:
-        return Response({'error': 'Order not found or not completed by warranty master'}, status=status.HTTP_404_NOT_FOUND)
-
-    old_status = order.status
-    order.status = 'одобрен'
-    order.save()
-
-    # Логируем одобрение
-    log_order_action(
-        order=order,
-        action='approved',
-        performed_by=request.user,
-        description=f'Заказ #{order.id} одобрен администратором {request.user.email}',
-        old_value=f'Статус: {old_status}',
-        new_value='Статус: одобрен'
-    )
-
-    # Производим выплату гарантийному мастеру
-    if order.transferred_to and order.final_cost:
-        warranty_master = order.transferred_to
-        payment_amount = order.final_cost * Decimal('0.7')  # 70% от стоимости заказа
-        
-        # Обновляем баланс
-        balance, _ = Balance.objects.get_or_create(user=warranty_master, defaults={'amount': Decimal('0.00')})
-        old_balance = balance.amount
-        balance.amount += payment_amount
-        balance.save()
-
-        # Логируем в BalanceLog
-        BalanceLog.objects.create(
-            user=warranty_master,
-            action='warranty_payment',
-            amount=payment_amount,
-        )
-
-        # Логируем в TransactionLog
-        log_transaction(
-            user=warranty_master,
-            transaction_type='master_payment',
-            amount=payment_amount,
-            description=f'Выплата гарантийному мастеру за заказ #{order.id}. Баланс: {old_balance} → {balance.amount}',
-            order=order,
-            performed_by=request.user
-        )
-
-    return Response({
-        'message': 'Warranty order approved and payment processed',
-        'order_id': order.id
-    }, status=status.HTTP_200_OK)
-
-
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def get_warranty_master_stats(request, master_id=None):
-    """
-    Получить статистику для гарантийного мастера
-    """
-    if master_id:
-        try:
-            master = CustomUser.objects.get(id=master_id, role='warrant-master')
-        except CustomUser.DoesNotExist:
-            return Response({'error': 'Warranty master not found'}, status=status.HTTP_404_NOT_FOUND)
-    else:
-        master = request.user
-        if master.role != 'warrant-master':
-            return Response({'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
-
-    # Статистика заказов
-    total_orders = Order.objects.filter(transferred_to=master).count()
-    completed_orders = Order.objects.filter(transferred_to=master, status__in=['завершен гарантийный', 'одобрен']).count()
-    pending_orders = Order.objects.filter(transferred_to=master, status='передан на гарантию').count()
-    
-    # Финансовая статистика
-    total_earnings = TransactionLog.objects.filter(
-        user=master,
-        transaction_type='master_payment'
-    ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0.00')
-
-    return Response({
-        'master_id': master.id,
-        'master_email': master.email,
-        'total_orders': total_orders,
-        'completed_orders': completed_orders,
-        'pending_orders': pending_orders,
-        'completion_rate': round((completed_orders / total_orders * 100) if total_orders > 0 else 0, 2),
-        'total_earnings': float(total_earnings)
-    })
-
-@api_view(['PATCH'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def remove_master(request, order_id):
-    try:
-        order = Order.objects.get(id=order_id)
-    except Order.DoesNotExist:
-        return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
-
-    # Check if order has an assigned master
-    if not order.assigned_master:
-        return Response({'error': 'No master assigned to this order'}, 
-                        status=status.HTTP_400_BAD_REQUEST)
-
-    # Save old values for logging
-    old_master = order.assigned_master.email
-    old_status = order.status
-
-    # Remove master assignment and set status to 'новый'
-    order.assigned_master = None
-    order.status = 'новый'
-    order.save()
-
-    # Log the action
-    log_order_action(
-        order=order,
-        action='master_removed',
-        performed_by=request.user,
-        description=f'Мастер {old_master} удален с заказа #{order.id}',
-        old_value=f'Мастер: {old_master}, Статус: {old_status}',
-        new_value=f'Мастер: None, Статус: новый'
-    )
-
-    return Response(OrderSerializer(order).data)
+@role_required([ROLES['SUPER_ADMIN']])
+def get_all_financial_transactions(request):
+    """Получение всех финансовых транзакций (только для админа)"""
+    transactions = FinancialTransaction.objects.all().order_by('-created_at')
+    serializer = FinancialTransactionSerializer(transactions, many=True)
+    return Response(serializer.data)

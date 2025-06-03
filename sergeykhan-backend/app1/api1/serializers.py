@@ -1,15 +1,30 @@
 from rest_framework import serializers
-from .models import Order, CustomUser, Balance, BalanceLog, CalendarEvent, Contact, OrderLog, TransactionLog, MasterAvailability, MasterAvailability, CompanyBalance, CompanyBalanceLog
+from django.utils import timezone
+from .models import Order, CustomUser, Balance, BalanceLog, CalendarEvent, Contact, OrderLog, TransactionLog, MasterAvailability, MasterAvailability, CompanyBalance, CompanyBalanceLog, OrderCompletion, FinancialTransaction, OrderCompletion, FinancialTransaction
 
 
 class OrderSerializer(serializers.ModelSerializer):
     """Основной сериализатор заказов - возвращает все поля"""
     full_address = serializers.CharField(source='get_full_address', read_only=True)
     public_address = serializers.CharField(source='get_public_address', read_only=True)
+    completion = serializers.SerializerMethodField()
     
     class Meta:
         model = Order
         fields = '__all__'
+    
+    def get_completion(self, obj):
+        """Возвращает информацию о завершении заказа, если она есть"""
+        try:
+            if hasattr(obj, 'completion') and obj.completion:
+                return {
+                    'id': obj.completion.id,
+                    'status': obj.completion.status,
+                    'created_at': obj.completion.created_at
+                }
+        except:
+            pass
+        return None
 
 
 class OrderPublicSerializer(serializers.ModelSerializer):
@@ -33,10 +48,24 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     operator_email = serializers.CharField(source='operator.email', read_only=True)
     curator_email = serializers.CharField(source='curator.email', read_only=True)
     transferred_to_email = serializers.CharField(source='transferred_to.email', read_only=True)
+    completion = serializers.SerializerMethodField()
     
     class Meta:
         model = Order
         fields = '__all__'
+    
+    def get_completion(self, obj):
+        """Возвращает информацию о завершении заказа, если она есть"""
+        try:
+            if hasattr(obj, 'completion') and obj.completion:
+                return {
+                    'id': obj.completion.id,
+                    'status': obj.completion.status,
+                    'created_at': obj.completion.created_at
+                }
+        except:
+            pass
+        return None
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -153,3 +182,154 @@ class MasterWorkloadSerializer(serializers.Serializer):
     orders_count_by_date = serializers.DictField()
     next_available_slot = serializers.DictField(allow_null=True)
     total_orders_today = serializers.IntegerField()
+
+
+class OrderCompletionSerializer(serializers.ModelSerializer):
+    """Сериализатор для завершения заказов мастерами"""
+    master_email = serializers.CharField(source='master.email', read_only=True)
+    curator_email = serializers.CharField(source='curator.email', read_only=True)
+    order_id = serializers.IntegerField(source='order.id', read_only=True)
+    order_description = serializers.CharField(source='order.description', read_only=True)
+    total_expenses = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    net_profit = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    
+    class Meta:
+        model = OrderCompletion
+        fields = [
+            'id', 'order', 'order_id', 'order_description', 'master', 'master_email',
+            'work_description', 'completion_photos', 'parts_expenses', 'transport_costs',
+            'total_received', 'total_expenses', 'net_profit', 'completion_date',
+            'status', 'curator', 'curator_email', 'review_date', 'curator_notes',
+            'is_distributed', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ('master', 'total_expenses', 'net_profit', 'is_distributed', 'created_at', 'updated_at')
+
+
+class OrderCompletionCreateSerializer(serializers.ModelSerializer):
+    """Сериализатор для создания завершения заказа мастером"""
+    completion_photos = serializers.ListField(
+        child=serializers.ImageField(),
+        required=False,
+        allow_empty=True
+    )
+    
+    class Meta:
+        model = OrderCompletion
+        fields = [
+            'order', 'work_description', 'completion_photos', 'parts_expenses',
+            'transport_costs', 'total_received', 'completion_date'
+        ]
+    
+    def validate_order(self, value):
+        """Проверяем, что заказ можно завершить"""
+        if not hasattr(value, 'assigned_master') or not value.assigned_master:
+            raise serializers.ValidationError("Заказ не назначен мастеру")
+        
+        if value.status not in ['выполняется', 'назначен']:
+            raise serializers.ValidationError("Заказ должен быть в статусе 'выполняется' или 'назначен'")
+        
+        if hasattr(value, 'completion'):
+            raise serializers.ValidationError("Заказ уже имеет запись о завершении")
+        
+        return value
+    
+    def create(self, validated_data):
+        """Создаем завершение заказа и обновляем статус заказа"""
+        request = self.context.get('request')
+        validated_data['master'] = request.user
+        
+        # Обрабатываем загружаемые фотографии
+        completion_photos = validated_data.pop('completion_photos', [])
+        
+        completion = super().create(validated_data)
+        
+        # Сохраняем фотографии (если есть)
+        if completion_photos:
+            photo_paths = []
+            for photo in completion_photos:
+                # Здесь можно добавить логику сохранения файлов
+                # Пока просто сохраняем имена файлов
+                photo_paths.append(photo.name)
+            completion.completion_photos = photo_paths
+            completion.save()
+        
+        # Обновляем статус заказа
+        completion.order.status = 'ожидает_подтверждения'
+        completion.order.save()
+        
+        return completion
+
+
+class OrderCompletionReviewSerializer(serializers.ModelSerializer):
+    """Сериализатор для проверки завершения заказа куратором"""
+    action = serializers.CharField(write_only=True)
+    comment = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    
+    class Meta:
+        model = OrderCompletion
+        fields = ['status', 'curator_notes', 'action', 'comment']
+        read_only_fields = ['status', 'curator_notes']
+    
+    def validate_action(self, value):
+        """Проверяем корректность действия"""
+        if value not in ['approve', 'reject']:
+            raise serializers.ValidationError("Действие должно быть 'approve' или 'reject'")
+        return value
+    
+    def update(self, instance, validated_data):
+        """Обновляем статус и устанавливаем куратора"""
+        request = self.context.get('request')
+        
+        # Устанавливаем статус в зависимости от action
+        action = validated_data.pop('action')
+        if action == 'approve':
+            validated_data['status'] = 'одобрен'
+        else:
+            validated_data['status'] = 'отклонен'
+            
+        # Устанавливаем комментарий
+        comment = validated_data.pop('comment', None)
+        if comment:
+            validated_data['curator_notes'] = comment
+            
+        validated_data['curator'] = request.user
+        validated_data['review_date'] = timezone.now()
+        
+        completion = super().update(instance, validated_data)
+        
+        # Обновляем статус заказа
+        if completion.status == 'одобрен':
+            completion.order.status = 'завершен'
+        else:
+            # Если отклонен, возвращаем в "в процессе"
+            completion.order.status = 'в процессе'
+        
+        completion.order.save()
+        
+        return completion
+
+
+class FinancialTransactionSerializer(serializers.ModelSerializer):
+    """Сериализатор для финансовых транзакций"""
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    transaction_type_display = serializers.CharField(source='get_transaction_type_display', read_only=True)
+    order_id = serializers.IntegerField(source='order_completion.order.id', read_only=True)
+    
+    class Meta:
+        model = FinancialTransaction
+        fields = [
+            'id', 'user', 'user_email', 'order_completion', 'order_id',
+            'transaction_type', 'transaction_type_display', 'amount',
+            'description', 'created_at'
+        ]
+        read_only_fields = ('created_at',)
+
+
+class OrderCompletionDistributionSerializer(serializers.Serializer):
+    """Сериализатор для отображения расчета распределения средств"""
+    master_immediate = serializers.DecimalField(max_digits=10, decimal_places=2)
+    master_deferred = serializers.DecimalField(max_digits=10, decimal_places=2)
+    master_total = serializers.DecimalField(max_digits=10, decimal_places=2)
+    company_share = serializers.DecimalField(max_digits=10, decimal_places=2)
+    curator_share = serializers.DecimalField(max_digits=10, decimal_places=2)
+    net_profit = serializers.DecimalField(max_digits=10, decimal_places=2)
