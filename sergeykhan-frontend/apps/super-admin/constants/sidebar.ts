@@ -3,8 +3,8 @@ import {
     ClipboardList,
     UserPlus,
     ChartColumn,
-    Headset, BookPlus, Anvil,
-    UserSearch, Percent, Podcast, FileClock, Wallet, User
+    Headset, Anvil,
+    UserSearch, Percent, Podcast, FileClock, Wallet, User, CalendarPlus, Users
 } from 'lucide-react';
 
 export const sidebar_items = [
@@ -38,10 +38,14 @@ export const sidebar_items = [
                 title: "Управление процентами",
                 url: "/percentages-management",
                 icon: Percent,
-            },{
+            },            {
                 title: "Управление дистанционкой",
                 url: "/distance-management",
                 icon: Podcast,
+            },{
+                title: "Нагрузка мастеров",
+                url: "/master-workload",
+                icon: Users,
             },{
                 title: "Логи",
                 url: "/logs",
@@ -58,9 +62,9 @@ export const sidebar_items = [
         name: "Формы",
         list: [
             {
-                title: "Форма для заказа",
-                url: "/form_for_order",
-                icon: BookPlus,
+                title: "Создать заказ",
+                url: "/orders/create",
+                icon: CalendarPlus,
             },
             {
                 title: "Форма для аккаунта",

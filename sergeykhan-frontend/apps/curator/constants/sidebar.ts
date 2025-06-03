@@ -6,7 +6,10 @@ import {
     Headset,
     BookPlus,
     Anvil,
-    User  // added User icon for Абоненты tab
+    User,  // added User icon for Абоненты tab
+    BarChart3,
+    Calendar,
+    CalendarPlus
 } from 'lucide-react';
 
 export const sidebar_items = [
@@ -33,10 +36,15 @@ export const sidebar_items = [
                 title: "Не обзвоненные",
                 url: "/not_called",
                 icon: Headset,
-            },{
+            },            {
                 title: "Управление мастерами",
                 url: "/master-management",
                 icon: Anvil,
+            },
+            {
+                title: "Рабочая нагрузка мастеров",
+                url: "/master-workload",
+                icon: BarChart3,
             },
             {
                 title: "Финансы",
@@ -49,9 +57,9 @@ export const sidebar_items = [
         name: "Формы",
         list: [
             {
-                title: "Форма для заказа",
-                url: "/form_for_order",
-                icon: BookPlus,
+                title: "Создать заказ",
+                url: "/orders/create",
+                icon: CalendarPlus,
             },
             {
                 title: "Форма для аккаунта",

@@ -13,16 +13,23 @@ import {
 } from "@workspace/ui/components/card";
 import { Eye } from "lucide-react";
 import { useDistanceApi } from "@/hooks/useDistanceApi";
-
 interface Order {
   id: number;
   client_name: string;
   client_phone: string;
   description: string;
   address?: string;
+  // New address fields from backend
+  street?: string;
+  house_number?: string;
+  apartment?: string;
+  entrance?: string;
+  public_address?: string;  // Street + house number only (for masters before taking)
+  full_address?: string;    // Complete address including apartment/entrance (for taken orders)
   status: string;
-  final_cost?: number;
+  final_cost?: string;  // Changed from number to string to match backend
   created_at: string;
+  assigned_master?: string | null;
 }
 
 interface MasterDistanceInfo {
@@ -47,6 +54,15 @@ const MasterOrdersPage = () => {
         fetchMasterDistanceWithOrders,
         takeOrder
     } = useDistanceApi();
+
+    const getDisplayAddress = (order: Order): string => {
+        // For available orders, show only public address (street + house number)
+        if (order.public_address) {
+            return order.public_address;
+        }
+        // Fallback to original address if public_address not available
+        return order.address || 'Не указан';
+    };
 
     useEffect(() => {
         loadDistanceData();
@@ -217,7 +233,7 @@ const MasterOrdersPage = () => {
                                             </div>
                                             <div className="space-y-1">
                                                 <p className="text-sm font-medium text-muted-foreground">Адрес</p>
-                                                <p className="font-medium">{order.address || 'Не указан'}</p>
+                                                <p className="font-medium">{getDisplayAddress(order)}</p>
                                             </div>
                                         </div>
                                         
@@ -231,7 +247,7 @@ const MasterOrdersPage = () => {
                                                 <div>
                                                     <p className="text-sm font-medium text-muted-foreground">Стоимость</p>
                                                     <p className="text-lg font-semibold text-green-600">
-                                                        {formatCurrency(order.final_cost)}
+                                                        {formatCurrency(parseFloat(order.final_cost))}
                                                     </p>
                                                 </div>
                                             )}

@@ -1,4 +1,4 @@
-import { Home, Headset, ChartColumn, BookPlus, UserRound, CalendarCheck, Settings, ChartNoAxesCombined, User } from 'lucide-react';
+import { Home, Headset, ChartColumn, UserRound, CalendarCheck, Settings, ChartNoAxesCombined, User, CalendarPlus } from 'lucide-react';
 
 export const sidebar_items = [
     {
@@ -20,9 +20,9 @@ export const sidebar_items = [
                 icon: Headset,
             },
             {
-                title: "Форма для заказа",
-                url: "/form_for_order",
-                icon: BookPlus,
+                title: "Создать заказ",
+                url: "/orders/create",
+                icon: CalendarPlus,
             },
             {
                 title: "Финансы",

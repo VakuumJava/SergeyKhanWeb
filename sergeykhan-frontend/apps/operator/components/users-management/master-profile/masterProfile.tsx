@@ -9,6 +9,7 @@ import { OrdersDataTable } from "@shared/orders/(beta-orders)/OrdersTable";
 import { columns, Order as OrderType  } from "@shared/constants/orders";
 import OperatorBalanceView from "@/components/balance-view/OperatorBalanceView";
 import { MasterCalendar } from "@workspace/ui/components/master-calendar";
+// import { MasterDistanceTable } from "./MasterDistanceTable"; // Temporarily disabled
 
 interface MasterProfileProps {
     id: string;
@@ -113,6 +114,14 @@ const MasterProfile: React.FC<MasterProfileProps> = ({ id }) => {
                         readOnly={true}
                         showCreateButton={false}
                     />
+                </div>
+            </div>
+
+            {/* Уровень дистанционки мастера */}
+            <div className="pt-5">
+                <div className="rounded-xl border p-6">
+                    {/* <MasterDistanceTable masterId={parseInt(id)} /> */}
+                    <div className="text-yellow-600">⚠️ Компонент дистанционки временно отключен</div>
                 </div>
             </div>
 

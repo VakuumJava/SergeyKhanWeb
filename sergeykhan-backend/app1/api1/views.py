@@ -8,18 +8,19 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.db import models
 
 from decimal import Decimal, InvalidOperation
 
-from .models import Order, CustomUser, Balance, BalanceLog, ProfitDistribution, CalendarEvent, Contact, CompanyBalance, OrderLog, TransactionLog
+from .models import Order, CustomUser, Balance, BalanceLog, ProfitDistribution, CalendarEvent, Contact, CompanyBalance, OrderLog, TransactionLog, MasterAvailability
 from .serializers import (
     OrderSerializer,
     CustomUserSerializer,
     BalanceSerializer,
     BalanceLogSerializer, CalendarEventSerializer, ContactSerializer,
-    OrderLogSerializer, TransactionLogSerializer, OrderDetailSerializer
+    OrderLogSerializer, TransactionLogSerializer, OrderDetailSerializer,
+    OrderPublicSerializer
 )
 from .middleware import role_required, RolePermission
 
@@ -91,6 +92,54 @@ def get_new_orders(request):
 def create_order(request):
     serializer = OrderSerializer(data=request.data)
     if serializer.is_valid():
+        # Check if scheduling information is provided
+        scheduled_date = request.data.get('scheduled_date')
+        scheduled_time = request.data.get('scheduled_time')
+        assigned_master_id = request.data.get('assigned_master')
+        
+        # If scheduling info is provided, validate it
+        if scheduled_date and scheduled_time and assigned_master_id:
+            try:
+                # Parse date and time
+                schedule_date = datetime.strptime(scheduled_date, '%Y-%m-%d').date()
+                schedule_time = datetime.strptime(scheduled_time, '%H:%M:%S').time()
+                
+                # Check if master exists
+                master = CustomUser.objects.get(id=assigned_master_id, role='master')
+                
+                # Check if master has availability at this time
+                availability_slots = MasterAvailability.objects.filter(
+                    master=master,
+                    date=schedule_date,
+                    start_time__lte=schedule_time,
+                    end_time__gt=schedule_time
+                )
+                
+                if not availability_slots.exists():
+                    return Response(
+                        {'error': 'Master is not available at the requested time'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Check if there are conflicting orders
+                conflicting_orders = Order.objects.filter(
+                    assigned_master=master,
+                    scheduled_date=schedule_date,
+                    scheduled_time=schedule_time
+                )
+                
+                if conflicting_orders.exists():
+                    return Response(
+                        {'error': 'Master already has an order scheduled at this time'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                    
+            except (ValueError, CustomUser.DoesNotExist):
+                return Response(
+                    {'error': 'Invalid master, date, or time format'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
         order = serializer.save(status='новый', is_test=False)
         
         # Логируем создание заказа
@@ -98,9 +147,9 @@ def create_order(request):
             order=order,
             action='created',
             performed_by=None,  # Публичное создание заказа
-            description=f'Заказ #{order.id} создан',
+            description=f'Заказ #{order.id} создан' + (f' с планируемым временем {scheduled_date} {scheduled_time}' if scheduled_date and scheduled_time else ''),
             old_value=None,
-            new_value=f'Статус: новый, Описание: {order.description}'
+            new_value=f'Статус: новый, Описание: {order.description}' + (f', Планируемое время: {scheduled_date} {scheduled_time}' if scheduled_date and scheduled_time else '')
         )
         
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
@@ -206,7 +255,8 @@ def assign_master(request, order_id):
 @permission_classes([IsAuthenticated])
 def get_assigned_orders(request):
     orders = Order.objects.filter(assigned_master=request.user)
-    serializer = OrderSerializer(orders, many=True)
+    # Use OrderDetailSerializer to show full address and details for taken orders
+    serializer = OrderDetailSerializer(orders, many=True)
     return Response(serializer.data)
 
 
@@ -478,7 +528,8 @@ def get_master_available_orders(request):
     from .distancionka import get_visible_orders_for_master
     
     orders = get_visible_orders_for_master(request.user.id)
-    serializer = OrderSerializer(orders, many=True)
+    # Use OrderPublicSerializer to hide private info (apartment/entrance/phone)
+    serializer = OrderPublicSerializer(orders, many=True)
     return Response(serializer.data)
 
 
@@ -623,7 +674,8 @@ def get_orders_by_master(request, master_id):
     """Get orders by master id"""
     master = CustomUser.objects.get(id=master_id)
     orders = Order.objects.filter(assigned_master=master)
-    serializer = OrderSerializer(orders, many=True)
+    # Use OrderDetailSerializer to show full address and details for taken orders
+    serializer = OrderDetailSerializer(orders, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -1914,7 +1966,8 @@ def get_orders_by_master(request, master_id):
     """Get orders by master id"""
     master = CustomUser.objects.get(id=master_id)
     orders = Order.objects.filter(assigned_master=master)
-    serializer = OrderSerializer(orders, many=True)
+    # Use OrderDetailSerializer to show full address and details for taken orders
+    serializer = OrderDetailSerializer(orders, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 

@@ -5,14 +5,13 @@ import ContentLayout from './ContentLayout'
 import { ContentLayoutBg } from '@workspace/ui/components/shared/constants/orders'
 import { Button } from '@workspace/ui/components/button'
 import Last4hours from "@shared/orders/last4hours"
-import LastDay from "@shared/orders/lastDay"
 import NonActiveOrders from "@shared/orders/NonActiveOrders"
 import ActiveOrders from "@shared/orders/ActiveOrders"
 import AllOrders from "@shared/orders/AllOrders"
 import Last24hours from "@shared/orders/last24hours";
 
 type OrdersTypeT = 'all' | '4hours' | '24hours' | 'non-active' | 'active'
-type UserStatusT = 'curator' | 'master'
+type UserStatusT = 'curator' | 'master' | 'operator'
 type AccessStatusT = 'pro' | 'max' | 'none'
 
 interface OrdersTabProps {
@@ -48,7 +47,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({ status, accessStatus = 'none' }) 
     const renderContent = () => {
         switch (ordersType) {
             case 'all':
-                return <AllOrders />
+                return <AllOrders isActiveEdit={false} onSelectedChange={() => {}} />
             case '4hours':
                 return <Last4hours />
             case '24hours':

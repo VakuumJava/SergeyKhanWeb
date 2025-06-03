@@ -34,7 +34,7 @@ export function MasterCalendar({
   userRole = 'user', 
   readOnly = false,
   showCreateButton = true,
-  apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+  apiBaseUrl = "http://127.0.0.1:8000"
 }: MasterCalendarProps) {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [newEventTitle, setNewEventTitle] = useState<string>("");
@@ -66,17 +66,22 @@ export function MasterCalendar({
         
         // Если передан masterId, получаем события конкретного мастера, иначе свои события
         const endpoint = masterId ? `/master/${masterId}/events/` : '/mine/';
+        console.log('Fetching events from endpoint:', endpoint);
+        console.log('API base URL:', apiBaseUrl);
+        console.log('Master ID:', masterId);
         
         const response = await api.get(endpoint, {
           headers: token ? { Authorization: `Token ${token}` } : {},
         });
         
-        console.log(response.data)
+        console.log('Response status:', response.status);
+        console.log('Response data:', response.data);
         if (response.status === 200) {
           setEvents(response.data);
         }
       } catch (error: any) {
         console.error('Ошибка при загрузке событий:', error);
+        console.error('Error response:', error.response);
         setError('Не удалось загрузить события календаря');
       } finally {
         setLoading(false);

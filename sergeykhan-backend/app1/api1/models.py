@@ -83,12 +83,19 @@ class Order(models.Model):
         ('завершен', 'Завершен'),
     )
 
-
-
     client_name = models.CharField(max_length=255)
     client_phone = models.CharField(max_length=20)
     description = models.TextField()
-    address = models.CharField(max_length=255, null=True, blank=True)  # Добавляем адрес
+    
+    # Раздельные поля адреса
+    street = models.CharField(max_length=255, null=True, blank=True, verbose_name='Улица')
+    house_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='Номер дома')
+    apartment = models.CharField(max_length=50, null=True, blank=True, verbose_name='Квартира')
+    entrance = models.CharField(max_length=50, null=True, blank=True, verbose_name='Подъезд')
+    
+    # Объединенный адрес для обратной совместимости
+    address = models.CharField(max_length=255, null=True, blank=True)
+    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='новый')
     is_test = models.BooleanField(default=False)  # Поле для указания тестового заказа
 
@@ -124,8 +131,10 @@ class Order(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-    )
-
+    )    # Scheduling fields
+    scheduled_date = models.DateField(null=True, blank=True, verbose_name='Дата выполнения')
+    scheduled_time = models.TimeField(null=True, blank=True, verbose_name='Время выполнения')
+    
     estimated_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     final_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     expenses = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -133,7 +142,34 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order {self.id} - {self.client_name} ({self.status})"
-
+    
+    def get_full_address(self):
+        """Возвращает полный адрес со всеми деталями"""
+        parts = []
+        if self.street:
+            parts.append(self.street)
+        if self.house_number:
+            parts.append(self.house_number)
+        if self.apartment:
+            parts.append(f"кв. {self.apartment}")
+        if self.entrance:
+            parts.append(f"подъезд {self.entrance}")
+        return ", ".join(parts) if parts else self.address or ""
+    
+    def get_public_address(self):
+        """Возвращает публичный адрес без квартиры и подъезда (для мастеров до взятия заказа)"""
+        parts = []
+        if self.street:
+            parts.append(self.street)
+        if self.house_number:
+            parts.append(self.house_number)
+        return ", ".join(parts) if parts else ""
+    
+    def save(self, *args, **kwargs):
+        """Автоматически обновляем поле address при сохранении"""
+        if not self.address:
+            self.address = self.get_full_address()
+        super().save(*args, **kwargs)
 
 
 class IsCurator(permissions.BasePermission):
@@ -183,7 +219,7 @@ class BalanceLog(models.Model):
     def __str__(self):
         return f"{self.user.email} - {self.get_balance_type_display()} - {self.get_action_type_display()} - {self.amount}"
 
-# Распределение прибыли
+# Распределение прибыли (старая модель - для совместимости)
 class ProfitDistribution(models.Model):
     master_percent = models.PositiveIntegerField(default=60)
     curator_percent = models.PositiveIntegerField(default=5)
@@ -192,6 +228,104 @@ class ProfitDistribution(models.Model):
 
     def __str__(self):
         return "Profit Distribution Settings"
+
+
+# Улучшенная модель для детального распределения прибыли
+class ProfitDistributionSettings(models.Model):
+    """
+    Настройки для двухэтапного распределения прибыли:
+    1. Автоматический расчёт чистой прибыли и авансов
+    2. Распределение финансов куратором
+    """
+    
+    # Этап 1: Автоматический расчёт чистой прибыли
+    # Чистая прибыль = сумма заказа - расходы мастера
+    advance_percent = models.PositiveIntegerField(
+        default=30, 
+        help_text="Аванс мастеру (% от чистой прибыли)"
+    )
+    initial_kassa_percent = models.PositiveIntegerField(
+        default=70, 
+        help_text="Сумма для передачи в кассу (% от чистой прибыли)"
+    )
+    
+    # Этап 2: Распределение финансов куратором
+    # Куратор распределяет деньги, полученные от мастера
+    cash_percent = models.PositiveIntegerField(
+        default=30, 
+        help_text="Наличные мастеру сразу (% от общей суммы)"
+    )
+    balance_percent = models.PositiveIntegerField(
+        default=30, 
+        help_text="Зачисление на баланс мастеру (% от общей суммы)"
+    )
+    curator_percent = models.PositiveIntegerField(
+        default=5, 
+        help_text="Зарплата куратору (% от общей суммы)"
+    )
+    final_kassa_percent = models.PositiveIntegerField(
+        default=35, 
+        help_text="Касса компании (% от общей суммы)"
+    )
+    
+    # Метаданные
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        limit_choices_to={'role__in': ['super-admin', 'admin']}
+    )
+    
+    class Meta:
+        verbose_name = "Настройки распределения прибыли"
+        verbose_name_plural = "Настройки распределения прибыли"
+    
+    def __str__(self):
+        return f"Настройки распределения прибыли (обновлено: {self.updated_at})"
+    
+    @staticmethod
+    def get_settings():
+        """Получить текущие настройки (создать если не существуют)"""
+        settings, created = ProfitDistributionSettings.objects.get_or_create(
+            id=1,
+            defaults={
+                'advance_percent': 30,
+                'initial_kassa_percent': 70,
+                'cash_percent': 30,
+                'balance_percent': 30,
+                'curator_percent': 5,
+                'final_kassa_percent': 35
+            }
+        )
+        return settings
+    
+    def clean(self):
+        """Валидация: проверяем, что сумма процентов в каждом этапе = 100%"""
+        from django.core.exceptions import ValidationError
+        
+        # Этап 1: Аванс + Касса = 100%
+        stage1_total = self.advance_percent + self.initial_kassa_percent
+        if stage1_total != 100:
+            raise ValidationError(
+                f'Сумма процентов этапа 1 должна быть 100%, а не {stage1_total}%'
+            )
+        
+        # Этап 2: Наличные + Баланс + Куратор + Касса = 100%
+        stage2_total = (
+            self.cash_percent + self.balance_percent + 
+            self.curator_percent + self.final_kassa_percent
+        )
+        if stage2_total != 100:
+            raise ValidationError(
+                f'Сумма процентов этапа 2 должна быть 100%, а не {stage2_total}%'
+            )
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -390,3 +524,59 @@ class TransactionLog(models.Model):
     
     def __str__(self):
         return f"{self.transaction_type} - {self.amount} - {self.user}"
+
+
+# Master Availability Model for scheduling
+class MasterAvailability(models.Model):
+    master = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        limit_choices_to={'role': 'master'},
+        related_name='availability_slots'
+    )
+    date = models.DateField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['date', 'start_time']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['master', 'date', 'start_time'], 
+                name='unique_master_availability'
+            )
+        ]
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.start_time and self.end_time and self.start_time >= self.end_time:
+            raise ValidationError("End time must be after start time")
+        
+        # Check for overlapping availability slots
+        if self.pk:
+            overlapping = MasterAvailability.objects.filter(
+                master=self.master,
+                date=self.date,
+            ).exclude(pk=self.pk).filter(
+                models.Q(start_time__lt=self.end_time) & 
+                models.Q(end_time__gt=self.start_time)
+            )
+        else:
+            overlapping = MasterAvailability.objects.filter(
+                master=self.master,
+                date=self.date,
+                start_time__lt=self.end_time,
+                end_time__gt=self.start_time
+            )
+        
+        if overlapping.exists():
+            raise ValidationError("This time slot overlaps with existing availability")
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.master.email} - {self.date} ({self.start_time}-{self.end_time})"

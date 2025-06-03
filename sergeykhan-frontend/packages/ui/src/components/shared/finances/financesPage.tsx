@@ -6,6 +6,7 @@ import { UniversalBalanceManager } from "@shared/balance/UniversalBalanceManager
 
 const FinancesPage = () => {
   const [isVisible] = useState(true);
+<<<<<<< HEAD
   const userId : string | null = typeof window !== "undefined" ? localStorage.getItem("user_id") : null;
 
   if (!userId) {
@@ -17,6 +18,50 @@ const FinancesPage = () => {
       </div>
     );
   }
+=======
+  const [userId, setUserId] = useState<string | null>(null);
+  const currency = '₸';
+
+  useEffect(() => {
+    // Get userId from localStorage only on client side
+    const userIdFromStorage = typeof window !== 'undefined' ? localStorage.getItem("user_id") : null;
+    setUserId(userIdFromStorage);
+  }, []);
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null;
+
+        if (!userId || !token) {
+          throw new Error("Пользователь не авторизован");
+        }
+
+        const res = await fetch(`${API}/balance/${userId}/`, {
+          headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error("Ошибка получения баланса");
+        }
+
+        const data = await res.json();
+        setBalance(data.balance);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (userId) {
+      fetchBalance();
+    }
+  }, [userId]);
+>>>>>>> origin/beka
 
   return (
     <div className="w-full container mx-auto px-4 py-8">

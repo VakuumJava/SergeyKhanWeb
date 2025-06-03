@@ -21,6 +21,20 @@ interface Props {
   id: string;
 }
 
+// Helper function to determine which address to show based on order status
+const getDisplayAddress = (order: Order): string => {
+  // If order is taken by current user, show full address
+  if (order.assigned_master && order.full_address) {
+    return order.full_address;
+  }
+  // If order is available, show public address (street + house only)
+  if (order.public_address) {
+    return order.public_address;
+  }
+  // Fallback to original address
+  return order.address || 'Не указан';
+};
+
 export default function MasterOrderDetailsClient({ id }: Props) {
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
@@ -55,7 +69,7 @@ export default function MasterOrderDetailsClient({ id }: Props) {
         setOrder(orderData);
         setCurrentUserId(userData.id);
       })
-      .catch((e) => setError(e.message))
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -315,7 +329,7 @@ export default function MasterOrderDetailsClient({ id }: Props) {
                 <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Адрес</p>
-                  <p className="text-lg font-semibold">{order.address || 'Не указан'}</p>
+                  <p className="text-lg font-semibold">{getDisplayAddress(order) || 'Не указан'}</p>
                 </div>
               </div>
 
@@ -344,7 +358,7 @@ export default function MasterOrderDetailsClient({ id }: Props) {
               <div>
                 <p className="text-sm font-medium text-green-800">Стоимость заказа</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(order.final_cost)}
+                  {formatCurrency(parseFloat(order.final_cost))}
                 </p>
               </div>
             </div>

@@ -13,6 +13,7 @@ from .balance_views import (
     get_company_balance_logs,
     get_user_balance_detailed_for_super_admin
 )
+from .calendar_views import get_master_events
 from .distancionka import (
     get_distance_settings,
     update_distance_settings,
@@ -23,6 +24,13 @@ from .distancionka import (
     set_master_distance_manually,
     reset_master_distance_to_automatic,
     get_master_distance_with_orders
+)
+from .master_workload_views import (
+    master_availability_list,
+    master_availability_detail,
+    master_workload_detail,
+    all_masters_workload,
+    validate_order_scheduling
 )
 
 urlpatterns = [
@@ -65,10 +73,10 @@ urlpatterns = [
     path('balance/<int:user_id>/history/', get_balance_with_history),
     path('profit-distribution/', profit_distribution),
     path('curator/fine-master/', fine_master),
-    path('mine',           get_my_events,      name='calendar-mine-no-slash'),  # support frontend GET /mine
-    path('mine/',           get_my_events,      name='calendar-mine'),
+    path('mine',           get_my_events,      name='calendar-mine-no-slash'),  # support frontend GET /mine    path('mine/',           get_my_events,      name='calendar-mine'),
     path('api/mine',        get_my_events,      name='calendar-mine-api'),  # support frontend without slash
     path('api/mine/',       get_my_events,      name='calendar-mine-api-slash'),  # support frontend with slash
+    path('master/<int:master_id>/events/', get_master_events, name='calendar-master-events'),
     path('create/',         create_event,       name='calendar-create'),
     path('update/<int:event_id>/', update_event_time, name='calendar-update'),
     path('delete/<int:event_id>/', delete_event,      name='calendar-delete'),
@@ -118,4 +126,11 @@ urlpatterns = [
     
     # Universal balance endpoint for dashboard (returns company balance for super-admin, personal balance for others)
     path('api/balance/<int:user_id>/dashboard/', get_user_balance_detailed_for_super_admin, name='get_user_balance_detailed_for_super_admin'),
+
+    # Master Workload and Availability endpoints
+    path('api/masters/<int:master_id>/availability/', master_availability_list, name='master_availability_list'),
+    path('api/masters/<int:master_id>/availability/<int:availability_id>/', master_availability_detail, name='master_availability_detail'),
+    path('api/masters/<int:master_id>/workload/', master_workload_detail, name='master_workload_detail'),
+    path('api/masters/workload/all/', all_masters_workload, name='all_masters_workload'),
+    path('api/orders/validate-scheduling/', validate_order_scheduling, name='validate_order_scheduling'),
 ]

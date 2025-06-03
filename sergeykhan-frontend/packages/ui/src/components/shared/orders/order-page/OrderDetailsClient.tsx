@@ -229,12 +229,63 @@ export default function OrderDetailsClient({ id }: Props) {
   if (error) return <div className="p-4 text-red-500">Ошибка: {error}</div>;
   if (!order) return null;
 
+  // Function to get address based on user role and order status
+  const getDisplayAddress = () => {
+    if (userRole === 'admin' || userRole === 'curator' || userRole === 'super-admin') {
+      // Admin, curator, and super-admin can see full address
+      return order.full_address || order.address;
+    } else if (userRole === 'master') {
+      // Masters see different address based on whether order is assigned to them
+      const isAssignedToCurrentUser = order.assigned_master === currentUserId?.toString();
+      if (isAssignedToCurrentUser) {
+        // Show full address if master has taken the order
+        return order.full_address || order.address;
+      } else {
+        // Show public address (limited) if order is not taken by this master
+        return order.public_address || order.address;
+      }
+    }
+    // Default fallback
+    return order.address;
+  };
+
+  // Function to get phone display based on user role and order status
+  const getDisplayPhone = () => {
+    if (userRole === 'admin' || userRole === 'curator' || userRole === 'super-admin') {
+      // Admin, curator, and super-admin can see full phone
+      return order.client_phone;
+    } else if (userRole === 'master') {
+      // Masters can only see phone if order is assigned to them
+      const isAssignedToCurrentUser = order.assigned_master === currentUserId?.toString();
+      if (isAssignedToCurrentUser) {
+        return order.client_phone;
+      } else {
+        // Hide phone for masters who haven't taken the order
+        return (
+          <span className="flex items-center gap-2 text-muted-foreground italic">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <line x1="2" y1="2" x2="22" y2="22"></line>
+              <path d="M18.5 13.5a7 7 0 0 0-7-7"></path>
+              <path d="M16.5 16.5C15.5 17.3 14.1 17.9 12.7 17.9C12.4 17.9 12.1 17.9 11.8 17.8C10 17.5 8.3 16.5 7 15.2C5.5 13.7 4.5 11.7 4.2 9.8C4.1 9.3 4 8.7 4 8.2C4.1 6.8 4.8 5.5 5.6 4.5"></path>
+              <path d="M18 6C18.9 7 19.5 8.2 19.6 9.5C19.6 9.9 19.6 10.3 19.5 10.7"></path>
+              <path d="M15.5 3.3C16.4 3.5 17.2 3.9 17.9 4.3"></path>
+              <path d="M12.2 3C12.6 3 13 3 13.4 3.1"></path>
+            </svg>
+            Скрыто для мастеров
+          </span>
+        );
+      }
+    }
+    // Default fallback
+    return order.client_phone;
+  };
+
   const rows: { label: string; value: React.ReactNode }[] = [
     { label: 'Номер заказа', value: order.id },
     { label: 'Дата создания', value: new Date(order.created_at).toLocaleString() },
     { label: 'Клиент', value: order.client_name },
-    { label: 'Телефон', value: order.client_phone },
-    { label: 'Адрес', value: order.address },
+    { label: 'Телефон', value: getDisplayPhone() },
+    { label: 'Адрес', value: getDisplayAddress() },
     { label: 'Описание', value: order.description },
     { label: 'Итоговая стоимость', value: `${order.final_cost} ₸` },
     { label: 'Мастер', value: order.assigned_master ?? 'Не назначен' },
@@ -261,7 +312,7 @@ export default function OrderDetailsClient({ id }: Props) {
         </TableBody>
       </Table>
 
-      {(userRole === 'admin' || userRole === 'curator') && (
+      {(userRole === 'admin' || userRole === 'curator' || userRole === 'super-admin') && (
         <div className="mt-6 flex flex-wrap gap-2">
           <Dialog open={isAssignOpen} onOpenChange={(open) => {
             setIsAssignOpen(open);

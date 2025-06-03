@@ -29,6 +29,13 @@ export interface Order {
     client_phone: string;
     description: string;
     address: string;
+    // New address fields from backend
+    street?: string;
+    house_number?: string;
+    apartment?: string;
+    entrance?: string;
+    public_address?: string;  // Street + house number only (for masters before taking)
+    full_address?: string;    // Complete address including apartment/entrance (for taken orders)
     created_at: string;        // ISO‑строка
     assigned_master: string | null;
     estimated_cost: string;    // если нужно
@@ -41,7 +48,7 @@ export interface Order {
 export interface OrdersDataTableProps {
     data: Order[];
     columns: ColumnDef<Order>[];
-    status?: "curator";
+    status?: "curator" | "operator";
     isEdit?: boolean;
     masterId?: string | undefined;
     isModel?: boolean;
