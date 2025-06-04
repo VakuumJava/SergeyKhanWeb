@@ -15,7 +15,8 @@ import {
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Badge } from "@workspace/ui/components/badge";
-import { ArrowLeft, User, Phone, MapPin, FileText, DollarSign, Calendar } from "lucide-react";
+import { ArrowLeft, User, Phone, MapPin, FileText, DollarSign, Calendar, CheckCircle } from "lucide-react";
+import OrderCompletionForm from "./OrderCompletionForm";
 
 interface Props {
   id: string;
@@ -42,6 +43,7 @@ export default function MasterOrderDetailsClient({ id }: Props) {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [takingOrder, setTakingOrder] = useState(false);
+  const [showCompletionForm, setShowCompletionForm] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -248,6 +250,23 @@ export default function MasterOrderDetailsClient({ id }: Props) {
   const isOrderAvailable = !order.assigned_master && 
     (order.status === 'новый' || order.status === 'в обработке');
   const isMyOrder = order.assigned_master === currentUserId?.toString();
+  const canCompleteOrder = isMyOrder && 
+    (order.status === 'назначен' || order.status === 'в работе');
+
+  const refreshOrderData = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`${API}/api/orders/${id}/detail/`, {
+        headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
+      });
+      if (response.ok) {
+        const updatedOrder = await response.json();
+        setOrder(updatedOrder);
+      }
+    } catch (error) {
+      console.error("Failed to refresh order data:", error);
+    }
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -407,17 +426,41 @@ export default function MasterOrderDetailsClient({ id }: Props) {
       {isMyOrder && (
         <Card>
           <CardContent className="pt-6">
-            <div className="text-center space-y-2">
+            <div className="text-center space-y-4">
               <p className="text-lg font-medium text-green-600">
                 ✅ Этот заказ назначен на вас
               </p>
-              <p className="text-muted-foreground">
-                Вы можете найти его во вкладке "Взятые заказы"
-              </p>
+              {canCompleteOrder ? (
+                <div className="space-y-2">
+                  <p className="text-muted-foreground">
+                    Вы можете завершить этот заказ
+                  </p>
+                  <Button 
+                    size="lg"
+                    onClick={() => setShowCompletionForm(true)}
+                    className="min-w-[200px] bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Завершить заказ
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">
+                  Вы можете найти его во вкладке "Взятые заказы"
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Order Completion Form */}
+      <OrderCompletionForm
+        orderId={id}
+        isOpen={showCompletionForm}
+        onClose={() => setShowCompletionForm(false)}
+        onSuccess={refreshOrderData}
+      />
     </div>
   );
 }

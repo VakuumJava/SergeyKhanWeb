@@ -57,7 +57,7 @@ export default function Calendar({ userRole = 'user' }: CalendarProps) {
         const userId = localStorage.getItem('user_id');
         const token = localStorage.getItem('token');
         // Можно не использовать userId, если не требуется для календаря
-        const response = await api.get('/mine/', {
+        const response = await api.get('/mine', {
           headers: token ? { Authorization: `Token ${token}` } : {},
         });
         console.log(response.data)

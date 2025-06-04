@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select";
 import { ActionsMenu } from "@workspace/ui/components/shared/constants/actionMenu";
+import OrderCompletionForm from "@shared/orders/completion/OrderCompletionForm";
 
 interface Props {
   id: string;
@@ -60,6 +61,7 @@ export default function OrderDetailsClient({ id }: Props) {
   const [warrantyMasterId, setWarrantyMasterId] = useState("");
   const [warrantyMasters, setWarrantyMasters] = useState<Master[]>([]);
   const [warrantyMastersLoading, setWarrantyMastersLoading] = useState(false);
+  const [showCompletionForm, setShowCompletionForm] = useState(false);
 
   const fetchMasters = async () => {
     const token = localStorage.getItem("token");
@@ -223,6 +225,23 @@ export default function OrderDetailsClient({ id }: Props) {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleCompletionSuccess = () => {
+    // Обновляем статус заказа локально после успешного завершения
+    if (order) {
+      setOrder({ ...order, status: 'проверяется', completion: { id: 1 } } as Order);
+    }
+    setShowCompletionForm(false);
+  };
+
+  const canCompleteOrder = () => {
+    if (!order || userRole !== 'master') return false;
+    // Мастер может завершить заказ только если он назначен на него и заказ не имеет записи о завершении
+    const isAssignedToCurrentUser = order.assigned_master === currentUserId?.toString();
+    // Проверяем, есть ли у заказа запись о завершении
+    const hasCompletion = order.completion !== undefined && order.completion !== null;
+    return isAssignedToCurrentUser && ['назначен', 'выполняется'].includes(order.status) && !hasCompletion;
   };
 
   if (loading) return <div className="p-4 text-center">Загрузка заказа…</div>;
@@ -405,11 +424,32 @@ export default function OrderDetailsClient({ id }: Props) {
           </Button>
         </div>
       )}
-      
 
+      {/* Кнопка завершения заказа для мастеров */}
+      {canCompleteOrder() && (
+        <div className="mt-6">
+          <Button 
+            onClick={() => setShowCompletionForm(true)}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            Завершить заказ
+          </Button>
+        </div>
+      )}
+      
       <div className="mt-4 flex justify-end">
         <ActionsMenu order={order} />
       </div>
+
+      {/* Компонент завершения заказа */}
+      {order && (
+        <OrderCompletionForm
+          orderId={order.id.toString()}
+          isOpen={showCompletionForm}
+          onClose={() => setShowCompletionForm(false)}
+          onSuccess={handleCompletionSuccess}
+        />
+      )}
     </div>
   );
 }

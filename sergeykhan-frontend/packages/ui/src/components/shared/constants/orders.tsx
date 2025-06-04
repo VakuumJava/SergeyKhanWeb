@@ -42,6 +42,7 @@ export interface Order {
     expenses: string;          // если нужно
     final_cost: string;
     status: string;
+    completion?: any;          // Поле для проверки наличия записи о завершении
     // + любые другие поля, которые приходят
 }
 

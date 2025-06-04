@@ -9,7 +9,8 @@ import {
     User,  // added User icon for Абоненты tab
     BarChart3,
     Calendar,
-    CalendarPlus
+    CalendarPlus,
+    CheckCircle  // added CheckCircle icon for Завершения заказов
 } from 'lucide-react';
 
 export const sidebar_items = [
@@ -45,6 +46,11 @@ export const sidebar_items = [
                 title: "Рабочая нагрузка мастеров",
                 url: "/master-workload",
                 icon: BarChart3,
+            },
+            {
+                title: "Завершения заказов",
+                url: "/completions",
+                icon: CheckCircle,
             },
             {
                 title: "Финансы",

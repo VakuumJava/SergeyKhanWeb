@@ -10,10 +10,11 @@ from rest_framework import status
 from django.utils import timezone
 from datetime import timedelta, datetime
 from django.db import models
+from django.core.exceptions import ValidationError
 
 from decimal import Decimal, InvalidOperation
 
-from .models import Order, CustomUser, Balance, BalanceLog, ProfitDistribution, CalendarEvent, Contact, CompanyBalance, OrderLog, TransactionLog, MasterAvailability, OrderCompletion, FinancialTransaction, CompanyBalanceLog
+from .models import Order, CustomUser, Balance, BalanceLog, ProfitDistribution, CalendarEvent, Contact, CompanyBalance, OrderLog, TransactionLog, MasterAvailability, OrderCompletion, FinancialTransaction, CompanyBalanceLog, ProfitDistributionSettings
 from .serializers import (
     OrderSerializer,
     CustomUserSerializer,
@@ -723,36 +724,61 @@ def fine_master(request):
 @api_view(['GET', 'PUT'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
+@role_required([ROLES['SUPER_ADMIN']])
 def profit_distribution(request):
-    dist = ProfitDistribution.objects.first()
-    if not dist:
-        dist = ProfitDistribution.objects.create()
+    """API для управления настройками распределения прибыли"""
+    settings = ProfitDistributionSettings.get_settings()
 
     if request.method == 'GET':
         return Response({
-            'master_percent': dist.master_percent,
-            'curator_percent': dist.curator_percent,
-            'operator_percent': dist.operator_percent,
-            'kassa_percent': dist.kassa
+            'advance_percent': settings.advance_percent,
+            'initial_kassa_percent': settings.initial_kassa_percent,
+            'cash_percent': settings.cash_percent,
+            'balance_percent': settings.balance_percent,
+            'curator_percent': settings.curator_percent,
+            'final_kassa_percent': settings.final_kassa_percent,
         })
 
     elif request.method == 'PUT':
-        for field in ['master_percent', 'curator_percent', 'operator_percent', 'kassa']:
+        # Обновляем поля
+        for field in ['advance_percent', 'initial_kassa_percent', 'cash_percent', 
+                     'balance_percent', 'curator_percent', 'final_kassa_percent']:
             if field in request.data:
-                setattr(dist, field, request.data[field])
+                setattr(settings, field, request.data[field])
 
-        total = sum([
-            dist.master_percent,
-            dist.curator_percent,
-            dist.operator_percent,
-            dist.kassa
-        ])
+        # Устанавливаем пользователя, который обновил настройки
+        settings.updated_by = request.user
 
-        if total != 100:
-            return Response({'error': 'Sum of percentages must be 100'}, status=400)
-
-        dist.save()
-        return Response({'message': 'Profit distribution updated'})
+        try:
+            # Метод clean() автоматически проверяет валидность процентов
+            settings.clean()
+            settings.save()
+            
+            # Логируем изменение настроек
+            log_order_action(
+                order=None,
+                action='percentage_settings_updated',
+                performed_by=request.user,
+                description=f'Обновлены настройки распределения прибыли: {request.data}'
+            )
+            
+            return Response({
+                'message': 'Настройки распределения прибыли успешно обновлены',
+                'settings': {
+                    'advance_percent': settings.advance_percent,
+                    'initial_kassa_percent': settings.initial_kassa_percent,
+                    'cash_percent': settings.cash_percent,
+                    'balance_percent': settings.balance_percent,
+                    'curator_percent': settings.curator_percent,
+                    'final_kassa_percent': settings.final_kassa_percent,
+                }
+            })
+            
+        except ValidationError as e:
+            return Response({
+                'error': 'Ошибка валидации', 
+                'details': e.messages
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
