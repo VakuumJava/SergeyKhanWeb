@@ -53,6 +53,20 @@ def log_order_action(order, action, performed_by, description, old_value=None, n
         new_value=new_value
     )
 
+def log_system_action(action, performed_by, description, old_value=None, new_value=None, metadata=None):
+    """
+    Логирует системное действие (не связанное с конкретным заказом)
+    """
+    from .models import SystemLog
+    SystemLog.objects.create(
+        action=action,
+        performed_by=performed_by,
+        description=description,
+        old_value=old_value,
+        new_value=new_value,
+        metadata=metadata or {}
+    )
+
 def log_transaction(user, transaction_type, amount, description, order=None, performed_by=None):
     """
     Логирует финансовую транзакцию
@@ -731,18 +745,26 @@ def profit_distribution(request):
 
     if request.method == 'GET':
         return Response({
-            'advance_percent': settings.advance_percent,
-            'initial_kassa_percent': settings.initial_kassa_percent,
-            'cash_percent': settings.cash_percent,
-            'balance_percent': settings.balance_percent,
+            'master_paid_percent': settings.master_paid_percent,
+            'master_balance_percent': settings.master_balance_percent,
             'curator_percent': settings.curator_percent,
-            'final_kassa_percent': settings.final_kassa_percent,
+            'company_percent': settings.company_percent,
+            'total_master_percent': settings.total_master_percent,
+            'updated_at': settings.updated_at,
+            'updated_by': settings.updated_by.email if settings.updated_by else None,
         })
 
     elif request.method == 'PUT':
+        # Сохраняем старые значения для логирования
+        old_settings = {
+            'master_paid_percent': settings.master_paid_percent,
+            'master_balance_percent': settings.master_balance_percent,
+            'curator_percent': settings.curator_percent,
+            'company_percent': settings.company_percent,
+        }
+        
         # Обновляем поля
-        for field in ['advance_percent', 'initial_kassa_percent', 'cash_percent', 
-                     'balance_percent', 'curator_percent', 'final_kassa_percent']:
+        for field in ['master_paid_percent', 'master_balance_percent', 'curator_percent', 'company_percent']:
             if field in request.data:
                 setattr(settings, field, request.data[field])
 
@@ -754,30 +776,52 @@ def profit_distribution(request):
             settings.clean()
             settings.save()
             
+            # Создаем детальное описание изменений
+            changes = []
+            for field, old_value in old_settings.items():
+                new_value = getattr(settings, field)
+                if old_value != new_value:
+                    field_names = {
+                        'master_paid_percent': 'Мастеру (выплачено)',
+                        'master_balance_percent': 'Мастеру (баланс)',
+                        'curator_percent': 'Куратору',
+                        'company_percent': 'Компании'
+                    }
+                    changes.append(f"{field_names[field]}: {old_value}% → {new_value}%")
+            
+            changes_description = "; ".join(changes) if changes else "Изменений не было"
+            
             # Логируем изменение настроек
-            log_order_action(
-                order=None,
+            log_system_action(
                 action='percentage_settings_updated',
                 performed_by=request.user,
-                description=f'Обновлены настройки распределения прибыли: {request.data}'
+                description=f'Обновлены настройки распределения прибыли. Изменения: {changes_description}',
+                old_value=str(old_settings),
+                new_value=str({
+                    'master_paid_percent': settings.master_paid_percent,
+                    'master_balance_percent': settings.master_balance_percent,
+                    'curator_percent': settings.curator_percent,
+                    'company_percent': settings.company_percent,
+                }),
+                metadata={'changes': changes}
             )
             
             return Response({
                 'message': 'Настройки распределения прибыли успешно обновлены',
                 'settings': {
-                    'advance_percent': settings.advance_percent,
-                    'initial_kassa_percent': settings.initial_kassa_percent,
-                    'cash_percent': settings.cash_percent,
-                    'balance_percent': settings.balance_percent,
+                    'master_paid_percent': settings.master_paid_percent,
+                    'master_balance_percent': settings.master_balance_percent,
                     'curator_percent': settings.curator_percent,
-                    'final_kassa_percent': settings.final_kassa_percent,
-                }
+                    'company_percent': settings.company_percent,
+                    'total_master_percent': settings.total_master_percent,
+                },
+                'changes': changes_description
             })
             
         except ValidationError as e:
             return Response({
                 'error': 'Ошибка валидации', 
-                'details': e.messages
+                'details': e.messages if hasattr(e, 'messages') else [str(e)]
             }, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -1939,10 +1983,11 @@ def get_completion_distribution(request, completion_id):
 
 
 def distribute_completion_funds(completion, curator):
-    """Распределение средств после одобрения завершения"""
+    """Распределение средств после одобрения завершения с учетом настроек"""
     if completion.is_distributed:
         return {
-            'master_amount': 0,
+            'master_paid_amount': 0,
+            'master_balance_amount': 0,
             'curator_amount': 0,
             'company_amount': 0,
         }
@@ -1950,48 +1995,62 @@ def distribute_completion_funds(completion, curator):
     distribution = completion.calculate_distribution()
     if not distribution:
         return {
-            'master_amount': 0,
+            'master_paid_amount': 0,
+            'master_balance_amount': 0,
             'curator_amount': 0,
             'company_amount': 0,
         }
     
     try:
-        # 1. Выплата мастеру (60% сразу)
+        # 1. Выплата мастеру сразу (master_paid_percent)
         master_balance, created = Balance.objects.get_or_create(user=completion.master)
         old_master_balance = master_balance.amount
-        master_balance.amount += distribution['master_immediate']
+        master_balance.paid_amount += distribution['master_paid']  # Увеличиваем выплаченную сумму
         master_balance.save()
         
-        # Логируем транзакцию мастера
+        # Логируем транзакцию выплаты мастеру
         FinancialTransaction.objects.create(
             user=completion.master,
             order_completion=completion,
             transaction_type='master_payment',
-            amount=distribution['master_immediate'],
-            description=f'Выплата за завершение заказа #{completion.order.id}'
+            amount=distribution['master_paid'],
+            description=f'Выплата мастеру за завершение заказа #{completion.order.id}'
         )
         
-        # Логируем изменение баланса мастера
+        # Логируем изменение выплаченного баланса мастера
         BalanceLog.objects.create(
             user=completion.master,
-            action_type='top_up',  # Используем правильный action_type
-            amount=distribution['master_immediate'],
+            action_type='payout',
+            amount=distribution['master_paid'],
             reason=f'Выплата за заказ #{completion.order.id}',
             performed_by=curator,
             old_value=old_master_balance,
             new_value=master_balance.amount
         )
         
-        # 2. Отложенная выплата мастеру (30% на будущее)
+        # 2. Зачисление мастеру на баланс (master_balance_percent)
+        master_balance.amount += distribution['master_balance']
+        master_balance.save()
+        
         FinancialTransaction.objects.create(
             user=completion.master,
             order_completion=completion,
             transaction_type='master_deferred',
-            amount=distribution['master_deferred'],
-            description=f'Отложенная выплата за заказ #{completion.order.id}'
+            amount=distribution['master_balance'],
+            description=f'Зачисление на баланс мастеру за заказ #{completion.order.id}'
         )
         
-        # 3. Выплата куратору (5%)
+        BalanceLog.objects.create(
+            user=completion.master,
+            action_type='top_up',
+            amount=distribution['master_balance'],
+            reason=f'Зачисление на баланс за заказ #{completion.order.id}',
+            performed_by=curator,
+            old_value=master_balance.amount - distribution['master_balance'],
+            new_value=master_balance.amount
+        )
+        
+        # 3. Выплата куратору на баланс (curator_percent)
         curator_balance, created = Balance.objects.get_or_create(user=curator)
         old_curator_balance = curator_balance.amount
         curator_balance.amount += distribution['curator_share']
@@ -2007,7 +2066,7 @@ def distribute_completion_funds(completion, curator):
         
         BalanceLog.objects.create(
             user=curator,
-            action_type='top_up',  # Используем правильный action_type
+            action_type='top_up',
             amount=distribution['curator_share'],
             reason=f'Выплата за проверку заказа #{completion.order.id}',
             performed_by=curator,
@@ -2015,7 +2074,7 @@ def distribute_completion_funds(completion, curator):
             new_value=curator_balance.amount
         )
         
-        # 4. Доход компании (35%)
+        # 4. Доход компании (company_percent)
         company_balance = CompanyBalance.objects.first()
         if company_balance:
             old_company_balance = company_balance.amount
@@ -2023,7 +2082,7 @@ def distribute_completion_funds(completion, curator):
             company_balance.save()
             
             CompanyBalanceLog.objects.create(
-                action_type='top_up',  # Используем правильный action_type
+                action_type='top_up',
                 amount=distribution['company_share'],
                 reason=f'Доход от завершения заказа #{completion.order.id}',
                 performed_by=curator,
@@ -2032,7 +2091,7 @@ def distribute_completion_funds(completion, curator):
             )
         
         FinancialTransaction.objects.create(
-            user=curator,  # Записываем на куратора как инициатора
+            user=curator,
             order_completion=completion,
             transaction_type='company_income',
             amount=distribution['company_share'],
@@ -2043,9 +2102,25 @@ def distribute_completion_funds(completion, curator):
         completion.is_distributed = True
         completion.save()
         
+        # Логируем распределение средств
+        settings_info = ", ".join([
+            f"Мастеру выплачено: {distribution['settings']['master_paid_percent']}%",
+            f"Мастеру на баланс: {distribution['settings']['master_balance_percent']}%",
+            f"Куратору: {distribution['settings']['curator_percent']}%",
+            f"Компании: {distribution['settings']['company_percent']}%"
+        ])
+        
+        log_order_action(
+            order=completion.order,
+            action='funds_distributed',
+            performed_by=curator,
+            description=f'Распределены средства по заказу #{completion.order.id}. Настройки: {settings_info}'
+        )
+        
         # Возвращаем информацию о распределенных средствах
         return {
-            'master_amount': distribution['master_immediate'],
+            'master_paid_amount': distribution['master_paid'],
+            'master_balance_amount': distribution['master_balance'],
             'curator_amount': distribution['curator_share'],
             'company_amount': distribution['company_share'],
         }
