@@ -41,36 +41,4 @@ export const sidebar_items = [
             }
         ]
     },
-    {
-      name: "Абоненты",
-      list: [
-        {
-          title: "Абоненты",
-          url: "/abonents",
-          icon: UserRound,
-        },
-      ],
-    },
-    // {
-    //     name: "Информация",
-    //     list: [
-    //         {
-    //             title: "График работы",
-    //             url: "/schedule",
-    //             icon: CalendarCheck
-    //         }, {
-    //             title: "Профиль",
-    //             url: "/profile",
-    //             icon: UserRound
-    //         }, {
-    //             title: "Рейтинг",
-    //             url: "/leaderboard",
-    //             icon: ChartNoAxesCombined
-    //         }, {
-    //             title: "Настройки",
-    //             url: "/settings",
-    //             icon: Settings
-    //         }
-    //     ]
-    // }
 ]
