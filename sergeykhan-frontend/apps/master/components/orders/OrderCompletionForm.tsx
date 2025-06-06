@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { API } from "@shared/constants/constants";
 import {
@@ -35,6 +35,7 @@ interface CompletionFormData {
 
 export default function OrderCompletionForm({ orderId, isOpen, onClose, onSuccess }: Props) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<CompletionFormData>({
     work_description: "",
     parts_cost: "0",
@@ -58,6 +59,7 @@ export default function OrderCompletionForm({ orderId, isOpen, onClose, onSucces
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('handleFileChange called', e.target.files);
     const files = Array.from(e.target.files || []);
     if (files.length > 5) {
       alert("Можно загрузить максимум 5 фотографий");
@@ -111,16 +113,25 @@ export default function OrderCompletionForm({ orderId, isOpen, onClose, onSucces
 
     try {
       const formDataToSend = new FormData();
+      formDataToSend.append("order", orderId);
       formDataToSend.append("work_description", formData.work_description);
-      formDataToSend.append("parts_cost", formData.parts_cost);
-      formDataToSend.append("transport_cost", formData.transport_cost);
-      formDataToSend.append("received_amount", formData.received_amount);
-      formDataToSend.append("completion_date", formData.completion_date);
+      formDataToSend.append("parts_expenses", formData.parts_cost);
+      formDataToSend.append("transport_costs", formData.transport_cost);
+      formDataToSend.append("total_received", formData.received_amount);
+      
+      // Преобразуем дату в правильный формат для Django (ISO 8601)
+      const completionDate = new Date(formData.completion_date);
+      formDataToSend.append("completion_date", completionDate.toISOString());
 
       // Добавляем фотографии
       formData.work_photos.forEach((file, index) => {
-        formDataToSend.append(`work_photos`, file);
+        formDataToSend.append(`completion_photos`, file);
       });
+
+      console.log("FormData being sent:");
+      for (let pair of formDataToSend.entries()) {
+        console.log(pair[0] + ': ' + (pair[1] instanceof File ? `File(${pair[1].name})` : pair[1]));
+      }
 
       const response = await fetch(`${API}/api/orders/${orderId}/complete/`, {
         method: "POST",
@@ -131,8 +142,20 @@ export default function OrderCompletionForm({ orderId, isOpen, onClose, onSucces
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || errorData.error || "Ошибка при завершении заказа");
+        const errorText = await response.text();
+        console.error("Server response:", response.status, errorText);
+        
+        let errorMessage = "Ошибка при завершении заказа";
+        try {
+          const errorData = JSON.parse(errorText);
+          console.error("Parsed error data:", errorData);
+          errorMessage = errorData.detail || errorData.error || JSON.stringify(errorData);
+        } catch (e) {
+          console.error("Could not parse error as JSON:", e);
+          errorMessage = errorText;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -192,30 +215,46 @@ export default function OrderCompletionForm({ orderId, isOpen, onClose, onSucces
 
           {/* Фотографии работ */}
           <div className="space-y-2">
-            <Label htmlFor="work_photos">Фотографии выполненной работы</Label>
+            <Label>Фотографии выполненной работы</Label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
               <div className="text-center">
                 <Camera className="mx-auto h-12 w-12 text-gray-400" />
                 <div className="mt-4">
-                  <label htmlFor="work_photos" className="cursor-pointer">
-                    <span className="mt-2 block text-sm font-medium text-gray-900">
-                      Загрузите фотографии работ
-                    </span>
-                    <span className="mt-1 block text-xs text-gray-500">
-                      PNG, JPG до 5MB каждая. Максимум 5 фотографий.
-                    </span>
-                  </label>
-                  <input
-                    id="work_photos"
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
+                  <span className="mt-2 block text-sm font-medium text-gray-900">
+                    Загрузите фотографии работ
+                  </span>
+                  <span className="mt-1 block text-xs text-gray-500">
+                    PNG, JPG до 5MB каждая. Максимум 5 фотографий.
+                  </span>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="mt-3"
+                    onClick={() => {
+                      console.log('Button clicked, trying to trigger file input');
+                      console.log('File input ref:', fileInputRef.current);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.click();
+                        console.log('File input clicked via ref');
+                      } else {
+                        console.error('File input ref is null');
+                      }
+                    }}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Выбрать файлы
+                  </Button>
                 </div>
               </div>
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
 
             {/* Превью фотографий */}
             {previewUrls.length > 0 && (
@@ -292,7 +331,7 @@ export default function OrderCompletionForm({ orderId, isOpen, onClose, onSucces
               </div>
 
               {/* Автоматические расчёты */}
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="border p-4 rounded-lg space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Общие расходы:</span>
                   <span className="font-medium">{formatCurrency(totalExpenses)}</span>

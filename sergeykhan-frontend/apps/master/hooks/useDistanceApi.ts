@@ -119,7 +119,7 @@ export const useDistanceApi = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/assign/${orderId}/`, {
+      const response = await fetch(`${API_BASE_URL}/assign/${orderId}/`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({

@@ -92,8 +92,11 @@ def get_new_orders(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_order(request):
+    print(f"DEBUG create_order: Received data: {request.data}")
+    
     serializer = OrderSerializer(data=request.data)
     if serializer.is_valid():
+        print("DEBUG create_order: Serializer is valid")
         # Check if scheduling information is provided
         scheduled_date = request.data.get('scheduled_date')
         scheduled_time = request.data.get('scheduled_time')
@@ -155,6 +158,8 @@ def create_order(request):
         )
         
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+    
+    print(f"DEBUG create_order: Serializer errors: {serializer.errors}")
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -1800,10 +1805,20 @@ def complete_order(request, order_id):
         # Подготавливаем данные с файлами
         data = request.data.copy()
         
+        # Логирование для отладки
+        print(f"DEBUG: Получены данные от фронтенда:")
+        print(f"DEBUG: request.data = {request.data}")
+        print(f"DEBUG: request.FILES = {request.FILES}")
+        
         # Получаем загружаемые фотографии
         completion_photos = request.FILES.getlist('completion_photos')
         if completion_photos:
+            print(f"DEBUG: Найдено {len(completion_photos)} фотографий")
             data['completion_photos'] = completion_photos
+        else:
+            print("DEBUG: Фотографии не найдены")
+        
+        print(f"DEBUG: Финальные данные для сериализатора: {data}")
         
         # Создаем сериализатор
         serializer = OrderCompletionCreateSerializer(data=data, context={'request': request})
@@ -1823,6 +1838,7 @@ def complete_order(request, order_id):
             
             return Response(OrderCompletionSerializer(completion).data, status=status.HTTP_201_CREATED)
         
+        print(f"DEBUG: Ошибки сериализатора: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
     except Order.DoesNotExist:
