@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 const VPBX_BASE_URL = "https://cloudpbx.beeline.kz/VPBX";
-const VBPX_SYSTEM_TOKEN = "eec7397e-e2a1-45a5-a137-dbac536b3e3d"
+const VBPX_SYSTEM_TOKEN = "8b6728d7-c763-4074-821a-6f2336d93cb8"
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,8 +10,8 @@ export async function POST(req: NextRequest) {
 
     // Создаем form data для отправки в теле запроса
     const formData = new URLSearchParams();
-    formData.append("login", "3itech");
-    formData.append("password", "Qwertyuign%&$#");
+    formData.append("login", "slavakhan100");
+    formData.append("password", "i4yc448p");
 
     // Делаем запрос
     const res = await fetch(`${VPBX_BASE_URL}/Account/GetToken`, {

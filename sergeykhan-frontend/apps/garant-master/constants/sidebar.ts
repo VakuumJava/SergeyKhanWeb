@@ -1,4 +1,4 @@
-import { Home, ClipboardList, CalendarDays, ChartColumn, UserRound, CalendarCheck, Settings, ChartNoAxesCombined } from 'lucide-react';
+import { Home, ClipboardList, CalendarDays, ChartColumn, UserRound, CalendarCheck, Settings, ChartNoAxesCombined, Phone } from 'lucide-react';
 
 export const sidebar_items = [
     {
@@ -35,6 +35,11 @@ export const sidebar_items = [
                 url: "/finance",
                 icon: ChartColumn,
             },
+            {
+                title: "Звонки",
+                url: "/call",
+                icon: Phone,
+            }
         ]
     },
     {

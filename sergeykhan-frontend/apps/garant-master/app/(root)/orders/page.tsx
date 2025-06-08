@@ -1,14 +1,11 @@
 import React from 'react'
-import ReDoneOrders from "@shared/orders/reDoneOrders";
+import OrdersTab from "@shared/orders/OrdersTab";
 
 const Orders = () => {
   return (
     <div>
-      {/*<NewOrders></NewOrders>*/}
-      {/*  <ActiveOrders/>*/}
-      {/*  <OrdersTab status={'master'} accessStatus={'pro'}></OrdersTab>*/}
-        <ReDoneOrders/>
-      {/*<RedoneOrders/>*/}
+      {/* Use OrdersTab with garant-master specific role restrictions */}
+      <OrdersTab status={'master'} accessStatus={'pro'} />
     </div>
   )
 }

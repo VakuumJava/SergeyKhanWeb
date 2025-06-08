@@ -81,6 +81,10 @@ const UnifiedOrderCreation: React.FC = () => {
         expenses: formData.expenses || (formData.price - formData.price * 0.9).toFixed(2),
       };
       
+      console.log('Отправляем данные на сервер:', payload);
+      console.log('Токен:', token);
+      console.log('API URL:', `${API}/orders/create/`);
+      
       const response = await axios.post(`${API}/orders/create/`, payload, {
         headers: { 
           Authorization: `Token ${token}`,
@@ -88,6 +92,7 @@ const UnifiedOrderCreation: React.FC = () => {
         }
       });
 
+      console.log('Успешный ответ:', response.data);
       alert('Заказ успешно создан!');
       
       // Сброс формы
@@ -108,9 +113,30 @@ const UnifiedOrderCreation: React.FC = () => {
       });
       setSelectedDate(undefined);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Ошибка создания заказа:', error);
-      alert('Ошибка при создании заказа');
+      
+      if (error.response) {
+        // Сервер ответил с кодом ошибки
+        console.error('Данные ошибки:', error.response.data);
+        console.error('Статус ошибки:', error.response.status);
+        console.error('Заголовки ответа:', error.response.headers);
+        
+        const errorMessage = error.response.data?.error || 
+                            error.response.data?.detail || 
+                            JSON.stringify(error.response.data) || 
+                            `Ошибка ${error.response.status}`;
+        
+        alert(`Ошибка при создании заказа: ${errorMessage}`);
+      } else if (error.request) {
+        // Запрос был отправлен, но ответ не получен
+        console.error('Нет ответа от сервера:', error.request);
+        alert('Ошибка: сервер не отвечает');
+      } else {
+        // Что-то другое
+        console.error('Неизвестная ошибка:', error.message);
+        alert(`Неизвестная ошибка: ${error.message}`);
+      }
     } finally {
       setSubmitting(false);
     }

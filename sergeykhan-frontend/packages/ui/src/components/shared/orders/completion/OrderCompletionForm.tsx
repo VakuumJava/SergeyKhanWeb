@@ -194,28 +194,31 @@ export default function OrderCompletionForm({ orderId, isOpen, onClose, onSucces
 
           {/* Фотографии работ */}
           <div className="space-y-2">
-            <Label htmlFor="work_photos">Фотографии выполненной работы</Label>
+            <Label>Фотографии выполненной работы</Label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
               <div className="text-center">
                 <Camera className="mx-auto h-12 w-12 text-gray-400" />
                 <div className="mt-4">
-                  <label htmlFor="work_photos" className="cursor-pointer">
-                    <span className="mt-2 block text-sm font-medium text-gray-900">
-                      Загрузите фотографии (до 5 штук, максимум 5MB каждое)
-                    </span>
-                    <input
-                      type="file"
-                      id="work_photos"
-                      multiple
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                    <Button type="button" variant="outline" className="mt-2">
-                      <Upload className="w-4 h-4 mr-2" />
-                      Выбрать файлы
-                    </Button>
-                  </label>
+                  <span className="mt-2 block text-sm font-medium text-gray-900">
+                    Загрузите фотографии (до 5 штук, максимум 5MB каждое)
+                  </span>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="mt-2"
+                    onClick={() => document.getElementById('work_photos_input')?.click()}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Выбрать файлы
+                  </Button>
+                  <input
+                    type="file"
+                    id="work_photos_input"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
                 </div>
               </div>
             </div>
@@ -291,23 +294,23 @@ export default function OrderCompletionForm({ orderId, isOpen, onClose, onSucces
               </div>
 
               {/* Автоматический расчет */}
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="bg-muted/50 dark:bg-muted/20 p-4 rounded-lg border space-y-2">
                 <div className="flex items-center gap-2 mb-3">
                   <Calculator className="w-4 h-4" />
                   <span className="font-medium">Расчет финансов</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-600">Общие расходы:</span>
+                    <span className="text-muted-foreground">Общие расходы:</span>
                     <div className="font-semibold">{formatCurrency(totalExpenses)}</div>
                   </div>
                   <div>
-                    <span className="text-gray-600">Полученная сумма:</span>
+                    <span className="text-muted-foreground">Полученная сумма:</span>
                     <div className="font-semibold">{formatCurrency(receivedAmount)}</div>
                   </div>
                   <div>
-                    <span className="text-gray-600">Чистая прибыль:</span>
-                    <div className={`font-semibold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className="text-muted-foreground">Чистая прибыль:</span>
+                    <div className={`font-semibold ${netProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {formatCurrency(netProfit)}
                     </div>
                   </div>
