@@ -612,34 +612,42 @@ class OrderCompletion(models.Model):
     # Распределение средств
     is_distributed = models.BooleanField(default=False, verbose_name="Средства распределены")
     
-    def save(self, *args, **kwargs):
-        # Автоматический расчет общих расходов и чистой прибыли
+    def save(self, *args, **kwargs):        # Автоматический расчет общих расходов и чистой прибыли
         self.total_expenses = self.parts_expenses + self.transport_costs
         self.net_profit = self.total_received - self.total_expenses
         super().save(*args, **kwargs)
     
     def calculate_distribution(self):
-        """Рассчитывает распределение средств"""
+        """Рассчитывает распределение средств на основе настроек ProfitDistributionSettings"""
         if self.status != 'одобрен' or self.is_distributed:
             return None
             
-        # 60% мастеру + 30% на оплаченный баланс (30% сразу + 30% потом)
-        master_total = self.net_profit * Decimal('0.90')  # 60% + 30%
-        master_immediate = self.net_profit * Decimal('0.60')  # 60% сразу
-        master_deferred = self.net_profit * Decimal('0.30')   # 30% потом
+        # Получаем настройки распределения
+        settings = ProfitDistributionSettings.get_settings()
         
-        # 35% компании
-        company_share = self.net_profit * Decimal('0.35')
+        # Используем настройки из второго этапа (распределение финансов куратором)
+        master_immediate = self.net_profit * (Decimal(settings.cash_percent) / 100)
+        master_deferred = self.net_profit * (Decimal(settings.balance_percent) / 100)
+        master_total = master_immediate + master_deferred
         
-        # 5% куратору
-        curator_share = self.net_profit * Decimal('0.05')
+        # Доля компании
+        company_share = self.net_profit * (Decimal(settings.final_kassa_percent) / 100)
+        
+        # Доля куратору
+        curator_share = self.net_profit * (Decimal(settings.curator_percent) / 100)
         
         return {
             'master_immediate': master_immediate,
             'master_deferred': master_deferred,
             'master_total': master_total,
             'company_share': company_share,
-            'curator_share': curator_share
+            'curator_share': curator_share,
+            'settings_used': {
+                'cash_percent': settings.cash_percent,
+                'balance_percent': settings.balance_percent,
+                'curator_percent': settings.curator_percent,
+                'final_kassa_percent': settings.final_kassa_percent
+            }
         }
     
     class Meta:

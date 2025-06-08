@@ -1,9 +1,9 @@
 import React from 'react';
-import TakenReDoneOrders from "@shared/orders/TakenReDoneOrders";
+import OrdersTakenPage from "@shared/orders/orders-taken/ordersTakenPage";
 
 const Page = () => {
   return (
-      <TakenReDoneOrders/>
+      <OrdersTakenPage/>
   );
 };
 

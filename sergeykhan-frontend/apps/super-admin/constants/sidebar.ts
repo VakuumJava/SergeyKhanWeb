@@ -4,7 +4,7 @@ import {
     UserPlus,
     ChartColumn,
     Headset, Anvil,
-    UserSearch, Percent, Podcast, FileClock, Wallet, User, CalendarPlus, Users
+    UserSearch, Percent, Podcast, FileClock, Wallet, User, CalendarPlus, Users, CheckCircle
 } from 'lucide-react';
 
 export const sidebar_items = [
@@ -46,6 +46,10 @@ export const sidebar_items = [
                 title: "Нагрузка мастеров",
                 url: "/master-workload",
                 icon: Users,
+            },{
+                title: "Завершения заказов",
+                url: "/completions",
+                icon: CheckCircle,
             },{
                 title: "Логи",
                 url: "/logs",

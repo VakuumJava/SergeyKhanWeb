@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { API } from "@shared/constants/constants";
 import {
@@ -35,7 +35,6 @@ interface CompletionFormData {
 
 export default function OrderCompletionForm({ orderId, isOpen, onClose, onSuccess }: Props) {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<CompletionFormData>({
     work_description: "",
     parts_cost: "0",
@@ -132,6 +131,9 @@ export default function OrderCompletionForm({ orderId, isOpen, onClose, onSucces
       for (let pair of formDataToSend.entries()) {
         console.log(pair[0] + ': ' + (pair[1] instanceof File ? `File(${pair[1].name})` : pair[1]));
       }
+      
+      console.log("URL:", `${API}/api/orders/${orderId}/complete/`);
+      console.log("Token:", token);
 
       const response = await fetch(`${API}/api/orders/${orderId}/complete/`, {
         method: "POST",
@@ -144,12 +146,28 @@ export default function OrderCompletionForm({ orderId, isOpen, onClose, onSucces
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Server response:", response.status, errorText);
+        console.error("Response headers:", Object.fromEntries(response.headers.entries()));
         
         let errorMessage = "Ошибка при завершении заказа";
         try {
           const errorData = JSON.parse(errorText);
           console.error("Parsed error data:", errorData);
-          errorMessage = errorData.detail || errorData.error || JSON.stringify(errorData);
+          if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (typeof errorData === 'object') {
+            // Если это объект с полями валидации
+            const fieldErrors = Object.entries(errorData).map(([field, errors]) => {
+              if (Array.isArray(errors)) {
+                return `${field}: ${errors.join(', ')}`;
+              }
+              return `${field}: ${errors}`;
+            }).join('; ');
+            errorMessage = fieldErrors || JSON.stringify(errorData);
+          } else {
+            errorMessage = JSON.stringify(errorData);
+          }
         } catch (e) {
           console.error("Could not parse error as JSON:", e);
           errorMessage = errorText;
@@ -230,16 +248,7 @@ export default function OrderCompletionForm({ orderId, isOpen, onClose, onSucces
                     type="button" 
                     variant="outline" 
                     className="mt-3"
-                    onClick={() => {
-                      console.log('Button clicked, trying to trigger file input');
-                      console.log('File input ref:', fileInputRef.current);
-                      if (fileInputRef.current) {
-                        fileInputRef.current.click();
-                        console.log('File input clicked via ref');
-                      } else {
-                        console.error('File input ref is null');
-                      }
-                    }}
+                    onClick={() => document.getElementById('file-upload')?.click()}
                   >
                     <Upload className="w-4 h-4 mr-2" />
                     Выбрать файлы
@@ -248,7 +257,7 @@ export default function OrderCompletionForm({ orderId, isOpen, onClose, onSucces
               </div>
             </div>
             <input
-              ref={fileInputRef}
+              id="file-upload"
               type="file"
               multiple
               accept="image/*"
@@ -331,14 +340,14 @@ export default function OrderCompletionForm({ orderId, isOpen, onClose, onSucces
               </div>
 
               {/* Автоматические расчёты */}
-              <div className="border p-4 rounded-lg space-y-2">
+              <div className="border border-muted p-4 rounded-lg space-y-2 bg-muted/50 dark:bg-muted/20">
                 <div className="flex justify-between text-sm">
-                  <span>Общие расходы:</span>
+                  <span className="text-muted-foreground">Общие расходы:</span>
                   <span className="font-medium">{formatCurrency(totalExpenses)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Чистая прибыль:</span>
-                  <span className={netProfit >= 0 ? "text-green-600" : "text-red-600"}>
+                  <span className={netProfit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
                     {formatCurrency(netProfit)}
                   </span>
                 </div>

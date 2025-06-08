@@ -86,6 +86,9 @@ export function OrderFormComponent() {
         try {
             // Получаем токен, например, из localStorage или другого источника
             const token = localStorage.getItem("token");
+            
+            console.log('Токен:', token);
+            console.log('API URL:', `${API}/orders/create/`);
 
             // Отправляем запрос с axios:
             const response = await axios.post(`${API}/orders/create/`, payload, {
@@ -105,8 +108,26 @@ export function OrderFormComponent() {
                 ),
             })
         } catch (error: any) {
-            console.error("Ошибка при отправке формы:", error.response ? error.response.data : error)
-            toast.error("Ошибка при отправке формы")
+            console.error("Ошибка при отправке формы:", error)
+            
+            if (error.response) {
+                console.error('Данные ошибки:', error.response.data);
+                console.error('Статус ошибки:', error.response.status);
+                console.error('Заголовки ответа:', error.response.headers);
+                
+                const errorMessage = error.response.data?.error || 
+                                    error.response.data?.detail || 
+                                    JSON.stringify(error.response.data) || 
+                                    `Ошибка ${error.response.status}`;
+                
+                toast.error(`Ошибка при отправке формы: ${errorMessage}`);
+            } else if (error.request) {
+                console.error('Нет ответа от сервера:', error.request);
+                toast.error('Ошибка: сервер не отвечает');
+            } else {
+                console.error('Неизвестная ошибка:', error.message);
+                toast.error(`Неизвестная ошибка: ${error.message}`);
+            }
         }
     }
 

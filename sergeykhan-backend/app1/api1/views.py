@@ -85,7 +85,7 @@ def create_test_order(request):
 @permission_classes([AllowAny])
 def get_new_orders(request):
     orders = Order.objects.filter(status='новый')
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -212,7 +212,7 @@ def get_user_by_token(request):
 @permission_classes([IsAuthenticated])
 def get_processing_orders(request):
     orders = Order.objects.filter(status='в обработке')
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -263,7 +263,7 @@ def assign_master(request, order_id):
 def get_assigned_orders(request):
     orders = Order.objects.filter(assigned_master=request.user)
     # Use OrderDetailSerializer to show full address and details for taken orders
-    serializer = OrderDetailSerializer(orders, many=True)
+    serializer = OrderDetailSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -479,7 +479,7 @@ def get_balance_logs(request, user_id):
 @permission_classes([IsAuthenticated])
 def get_all_orders(request):
     orders = Order.objects.all()
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -489,7 +489,7 @@ def get_all_orders(request):
 def get_orders_last_4hours(request):
     time_threshold = timezone.now() - timedelta(hours=4)
     orders = Order.objects.filter(created_at__gte=time_threshold)
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -499,7 +499,7 @@ def get_orders_last_4hours(request):
 def get_orders_last_day(request):
     time_threshold = timezone.now() - timedelta(days=1)
     orders = Order.objects.filter(created_at__gte=time_threshold)
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -509,7 +509,7 @@ def get_orders_last_day(request):
 def get_active_orders(request):
     active_statuses = ['в обработке', 'назначен', 'выполняется']
     orders = Order.objects.filter(status__in=active_statuses)
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -519,7 +519,7 @@ def get_active_orders(request):
 def get_non_active_orders(request):
     inactive_statuses = ['завершен', 'новый']
     orders = Order.objects.filter(status__in=inactive_statuses)
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -535,7 +535,7 @@ def get_master_available_orders(request):
     from .distancionka import get_visible_orders_for_master
     
     orders = get_visible_orders_for_master(request.user.id)
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -681,7 +681,7 @@ def get_orders_by_master(request, master_id):
     master = CustomUser.objects.get(id=master_id)
     orders = Order.objects.filter(assigned_master=master)
     # Use OrderDetailSerializer to show full address and details for taken orders
-    serializer = OrderDetailSerializer(orders, many=True)
+    serializer = OrderDetailSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -934,7 +934,7 @@ def get_guaranteed_orders(request, master_id):
         return Response({'error': 'Мастер не найден'}, status=404)
 
     orders = Order.objects.filter(transferred_to=master)
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -942,7 +942,7 @@ def get_guaranteed_orders(request, master_id):
 @permission_classes([IsAuthenticated])
 def get_all_guaranteed_orders(request):
     orders = Order.objects.filter(transferred_to__isnull=False)
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -1214,7 +1214,7 @@ def get_order_detail(request, order_id):
     """
     try:
         order = Order.objects.get(id=order_id)
-        serializer = OrderDetailSerializer(order)
+        serializer = OrderDetailSerializer(order, context={'request': request})
         return Response(serializer.data)
     except Order.DoesNotExist:
         return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -1445,7 +1445,7 @@ def get_user_by_token(request):
 @permission_classes([IsAuthenticated])
 def get_processing_orders(request):
     orders = Order.objects.filter(status='в обработке')
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -1495,7 +1495,7 @@ def assign_master(request, order_id):
 @permission_classes([IsAuthenticated])
 def get_assigned_orders(request):
     orders = Order.objects.filter(assigned_master=request.user)
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -1711,7 +1711,7 @@ def get_balance_logs(request, user_id):
 @permission_classes([IsAuthenticated])
 def get_all_orders(request):
     orders = Order.objects.all()
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -1721,7 +1721,7 @@ def get_all_orders(request):
 def get_orders_last_4hours(request):
     time_threshold = timezone.now() - timedelta(hours=4)
     orders = Order.objects.filter(created_at__gte=time_threshold)
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -1731,7 +1731,7 @@ def get_orders_last_4hours(request):
 def get_orders_last_day(request):
     time_threshold = timezone.now() - timedelta(days=1)
     orders = Order.objects.filter(created_at__gte=time_threshold)
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -1741,7 +1741,7 @@ def get_orders_last_day(request):
 def get_active_orders(request):
     active_statuses = ['в обработке', 'назначен', 'выполняется']
     orders = Order.objects.filter(status__in=active_statuses)
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -1751,7 +1751,7 @@ def get_active_orders(request):
 def get_non_active_orders(request):
     inactive_statuses = ['завершен', 'новый']
     orders = Order.objects.filter(status__in=inactive_statuses)
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -1767,7 +1767,7 @@ def get_master_available_orders(request):
     from .distancionka import get_visible_orders_for_master
     
     orders = get_visible_orders_for_master(request.user.id)
-    serializer = OrderSerializer(orders, many=True)
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -1802,7 +1802,7 @@ def complete_order(request, order_id):
                 'error': 'Заказ уже имеет запись о завершении'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Подготавливаем данные с файлами
+        # Подготавливаем данные
         data = request.data.copy()
         
         # Логирование для отладки
@@ -1810,11 +1810,12 @@ def complete_order(request, order_id):
         print(f"DEBUG: request.data = {request.data}")
         print(f"DEBUG: request.FILES = {request.FILES}")
         
-        # Получаем загружаемые фотографии
+        # Получаем загружаемые фотографии для логирования
         completion_photos = request.FILES.getlist('completion_photos')
         if completion_photos:
             print(f"DEBUG: Найдено {len(completion_photos)} фотографий")
-            data['completion_photos'] = completion_photos
+            for i, photo in enumerate(completion_photos):
+                print(f"  Фото {i+1}: {photo.name}, размер: {photo.size}, тип: {photo.content_type}")
         else:
             print("DEBUG: Фотографии не найдены")
         
@@ -1852,30 +1853,30 @@ def complete_order(request, order_id):
 def get_master_completions(request):
     """Получение списка завершений заказов мастера"""
     completions = OrderCompletion.objects.filter(master=request.user).order_by('-created_at')
-    serializer = OrderCompletionSerializer(completions, many=True)
+    serializer = OrderCompletionSerializer(completions, many=True, context={'request': request})
     return Response(serializer.data)
 
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-@role_required([ROLES['CURATOR']])
+@role_required([ROLES['CURATOR'], ROLES['SUPER_ADMIN']])
 def get_pending_completions(request):
     """Получение списка завершений, ожидающих подтверждения"""
     completions = OrderCompletion.objects.filter(status='ожидает_проверки').order_by('-created_at')
-    serializer = OrderCompletionSerializer(completions, many=True)
+    serializer = OrderCompletionSerializer(completions, many=True, context={'request': request})
     return Response(serializer.data)
 
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-@role_required([ROLES['CURATOR']])
+@role_required([ROLES['CURATOR'], ROLES['SUPER_ADMIN']])
 def get_completion_detail(request, completion_id):
     """Получение детальной информации о завершении заказа"""
     try:
         completion = OrderCompletion.objects.get(id=completion_id)
-        serializer = OrderCompletionSerializer(completion)
+        serializer = OrderCompletionSerializer(completion, context={'request': request})
         return Response(serializer.data)
         
     except OrderCompletion.DoesNotExist:
@@ -1885,9 +1886,9 @@ def get_completion_detail(request, completion_id):
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-@role_required([ROLES['CURATOR']])
+@role_required([ROLES['CURATOR'], ROLES['SUPER_ADMIN']])
 def review_completion(request, completion_id):
-    """Проверка завершения заказа куратором"""
+    """Проверка завершения заказа куратором или супер-админом"""
     try:
         completion = OrderCompletion.objects.get(id=completion_id)
         
@@ -1900,37 +1901,53 @@ def review_completion(request, completion_id):
         serializer = OrderCompletionReviewSerializer(completion, data=request.data, context={'request': request})
         
         if serializer.is_valid():
-            action = serializer.validated_data.get('action')
-            completion = serializer.save()
-            
-            # Логируем действие
-            action_type = 'completion_approved' if completion.status == 'одобрен' else 'completion_rejected'
-            log_order_action(
-                order=completion.order,
-                action=action_type,
-                performed_by=request.user,
-                description=f'Завершение заказа {completion.status} куратором',
-                old_value='ожидает_проверки',
-                new_value=completion.status
-            )
-            
-            # Если одобрено, распределяем средства
-            result_data = OrderCompletionSerializer(completion).data
-            if completion.status == 'одобрен':
-                distribution = distribute_completion_funds(completion, request.user)
-                if distribution:
-                    result_data.update({
-                        'master_payment': distribution.get('master_amount', 0),
-                        'curator_payment': distribution.get('curator_amount', 0),
-                        'company_payment': distribution.get('company_amount', 0)
-                    })
-            
-            return Response(result_data)
+            try:
+                action = serializer.validated_data.get('action')
+                completion = serializer.save()
+                
+                # Логируем действие
+                action_type = 'completion_approved' if completion.status == 'одобрен' else 'completion_rejected'
+                log_order_action(
+                    order=completion.order,
+                    action=action_type,
+                    performed_by=request.user,
+                    description=f'Завершение заказа {completion.status} куратором',
+                    old_value='ожидает_проверки',
+                    new_value=completion.status
+                )
+                
+                # Если одобрено, распределяем средства
+                result_data = OrderCompletionSerializer(completion).data
+                if completion.status == 'одобрен':
+                    try:
+                        distribution = distribute_completion_funds(completion, request.user)
+                        if distribution:
+                            result_data.update({
+                                'master_payment': distribution.get('master_amount', 0),
+                                'curator_payment': distribution.get('curator_amount', 0),
+                                'company_payment': distribution.get('company_amount', 0)
+                            })
+                    except Exception as dist_error:
+                        # Если ошибка в распределении средств, возвращаем успешный ответ но с предупреждением
+                        result_data['distribution_error'] = f'Ошибка распределения средств: {str(dist_error)}'
+                
+                return Response(result_data)
+                
+            except Exception as save_error:
+                return Response({
+                    'error': 'Ошибка при сохранении завершения',
+                    'details': str(save_error)
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
     except OrderCompletion.DoesNotExist:
         return Response({'error': 'Запись о завершении не найдена'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'error': 'Внутренняя ошибка сервера',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -1972,10 +1989,24 @@ def distribute_completion_funds(completion, curator):
         }
     
     try:
-        # 1. Выплата мастеру (60% сразу)
+        # Ensure all monetary values are Decimal to avoid type errors
+        master_immediate = Decimal(str(distribution['master_immediate']))
+        master_deferred = Decimal(str(distribution['master_deferred']))
+        curator_share = Decimal(str(distribution['curator_share']))
+        company_share = Decimal(str(distribution['company_share']))
+        
+        # Логируем начало распределения
+        log_order_action(
+            order=completion.order,
+            action='distribution_started',
+            performed_by=curator,
+            description=f'Начало распределения средств: {distribution["settings_used"]} для заказа #{completion.order.id}'
+        )
+        
+        # 1. Выплата мастеру (процент из настроек)
         master_balance, created = Balance.objects.get_or_create(user=completion.master)
         old_master_balance = master_balance.amount
-        master_balance.amount += distribution['master_immediate']
+        master_balance.amount += master_immediate
         master_balance.save()
         
         # Логируем транзакцию мастера
@@ -1983,65 +2014,65 @@ def distribute_completion_funds(completion, curator):
             user=completion.master,
             order_completion=completion,
             transaction_type='master_payment',
-            amount=distribution['master_immediate'],
-            description=f'Выплата за завершение заказа #{completion.order.id}'
+            amount=master_immediate,
+            description=f'Выплата за завершение заказа #{completion.order.id} ({distribution["settings_used"]["cash_percent"]}%)'
         )
         
         # Логируем изменение баланса мастера
         BalanceLog.objects.create(
             user=completion.master,
             action_type='top_up',  # Используем правильный action_type
-            amount=distribution['master_immediate'],
-            reason=f'Выплата за заказ #{completion.order.id}',
+            amount=master_immediate,
+            reason=f'Выплата за заказ #{completion.order.id} ({distribution["settings_used"]["cash_percent"]}%)',
             performed_by=curator,
             old_value=old_master_balance,
             new_value=master_balance.amount
         )
         
-        # 2. Отложенная выплата мастеру (30% на будущее)
+        # 2. Отложенная выплата мастеру (процент из настроек)
         FinancialTransaction.objects.create(
             user=completion.master,
             order_completion=completion,
             transaction_type='master_deferred',
-            amount=distribution['master_deferred'],
-            description=f'Отложенная выплата за заказ #{completion.order.id}'
+            amount=master_deferred,
+            description=f'Отложенная выплата за заказ #{completion.order.id} ({distribution["settings_used"]["balance_percent"]}%)'
         )
         
-        # 3. Выплата куратору (5%)
+        # 3. Выплата куратору (процент из настроек)
         curator_balance, created = Balance.objects.get_or_create(user=curator)
         old_curator_balance = curator_balance.amount
-        curator_balance.amount += distribution['curator_share']
+        curator_balance.amount += curator_share
         curator_balance.save()
         
         FinancialTransaction.objects.create(
             user=curator,
             order_completion=completion,
             transaction_type='curator_payment',
-            amount=distribution['curator_share'],
-            description=f'Выплата куратору за одобрение заказа #{completion.order.id}'
+            amount=curator_share,
+            description=f'Выплата куратору за одобрение заказа #{completion.order.id} ({distribution["settings_used"]["curator_percent"]}%)'
         )
         
         BalanceLog.objects.create(
             user=curator,
             action_type='top_up',  # Используем правильный action_type
-            amount=distribution['curator_share'],
-            reason=f'Выплата за проверку заказа #{completion.order.id}',
+            amount=curator_share,
+            reason=f'Выплата за проверку заказа #{completion.order.id} ({distribution["settings_used"]["curator_percent"]}%)',
             performed_by=curator,
             old_value=old_curator_balance,
             new_value=curator_balance.amount
         )
         
-        # 4. Доход компании (35%)
+        # 4. Доход компании (процент из настроек)
         company_balance = CompanyBalance.objects.first()
         if company_balance:
             old_company_balance = company_balance.amount
-            company_balance.amount += distribution['company_share']
+            company_balance.amount += company_share
             company_balance.save()
             
             CompanyBalanceLog.objects.create(
                 action_type='top_up',  # Используем правильный action_type
-                amount=distribution['company_share'],
-                reason=f'Доход от завершения заказа #{completion.order.id}',
+                amount=company_share,
+                reason=f'Доход от завершения заказа #{completion.order.id} ({distribution["settings_used"]["final_kassa_percent"]}%)',
                 performed_by=curator,
                 old_value=old_company_balance,
                 new_value=company_balance.amount
@@ -2051,19 +2082,27 @@ def distribute_completion_funds(completion, curator):
             user=curator,  # Записываем на куратора как инициатора
             order_completion=completion,
             transaction_type='company_income',
-            amount=distribution['company_share'],
-            description=f'Доход компании от заказа #{completion.order.id}'
+            amount=company_share,
+            description=f'Доход компании от заказа #{completion.order.id} ({distribution["settings_used"]["final_kassa_percent"]}%)'
         )
         
         # Отмечаем как распределено
         completion.is_distributed = True
         completion.save()
         
+        # Логируем успешное завершение
+        log_order_action(
+            order=completion.order,
+            action='distribution_completed',
+            performed_by=curator,
+            description=f'Распределение средств завершено: мастер {master_immediate}, куратор {curator_share}, компания {company_share}'
+        )
+        
         # Возвращаем информацию о распределенных средствах
         return {
-            'master_amount': distribution['master_immediate'],
-            'curator_amount': distribution['curator_share'],
-            'company_amount': distribution['company_share'],
+            'master_amount': master_immediate,
+            'curator_amount': curator_share,
+            'company_amount': company_share,
         }
         
     except Exception as e:

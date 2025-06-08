@@ -1,15 +1,29 @@
 import React from 'react';
-import Calendar from "@/components/calendar/components/Calendar";
+import { MasterCalendar } from "@workspace/ui/components/master-calendar";
 import {LinearGraph} from "@/components/calendar/components/LinearGraph";
+import { API } from "@shared/constants/constants";
 
 const CalendarPage = () => {
+  // Получаем ID пользователя из localStorage
+  const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+  
   return (
     <div className="Calendar">
       <div className="container mt-8 flex flex-col gap-14">
         <div className="flex items-center justify-center gap-4">
-          <h1 className="text-2xl font-bold">Calendar</h1>
+          <h1 className="text-2xl font-bold">Календарь загруженности</h1>
         </div>
-        <Calendar/>
+        
+        {/* Используем универсальный компонент календаря мастера */}
+        <div className="rounded-xl border p-6">
+          <MasterCalendar 
+            masterId={userId ? parseInt(userId) : undefined}
+            userRole="garant_master" 
+            readOnly={false}
+            showCreateButton={true}
+            apiBaseUrl={API}
+          />
+        </div>
 
         {/*<div className="grid grid-cols-4 grid-rows-1 gap-5">*/}
 

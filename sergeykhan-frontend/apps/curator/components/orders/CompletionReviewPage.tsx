@@ -366,10 +366,10 @@ export default function CompletionReviewPage({ completionId }: Props) {
               {completion.completion_photos.map((photo, index) => (
                 <div key={index} className="relative">
                   <img
-                    src={`${API}${photo}`}
+                    src={photo}
                     alt={`Фото работы ${index + 1}`}
                     className="w-full h-32 object-cover rounded-lg border cursor-pointer hover:scale-105 transition-transform"
-                    onClick={() => window.open(`${API}${photo}`, '_blank')}
+                    onClick={() => window.open(photo, '_blank')}
                   />
                 </div>
               ))}
@@ -388,39 +388,39 @@ export default function CompletionReviewPage({ completionId }: Props) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm font-medium text-blue-800">Получено</p>
-              <p className="text-2xl font-bold text-blue-600">
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/50 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Получено</p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {formatCurrency(completion.total_received)}
               </p>
             </div>
 
-            <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
-              <p className="text-sm font-medium text-orange-800">Расходы на детали</p>
-              <p className="text-2xl font-bold text-orange-600">
+            <div className="p-4 bg-orange-50 dark:bg-orange-950/50 rounded-lg border border-orange-200 dark:border-orange-800">
+              <p className="text-sm font-medium text-orange-800 dark:text-orange-300">Расходы на детали</p>
+              <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                 {formatCurrency(completion.parts_expenses)}
               </p>
             </div>
 
-            <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <p className="text-sm font-medium text-purple-800">Транспорт</p>
-              <p className="text-2xl font-bold text-purple-600">
+            <div className="p-4 bg-purple-50 dark:bg-purple-950/50 rounded-lg border border-purple-200 dark:border-purple-800">
+              <p className="text-sm font-medium text-purple-800 dark:text-purple-300">Транспорт</p>
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                 {formatCurrency(completion.transport_costs)}
               </p>
             </div>
 
             <div className={`p-4 rounded-lg border ${
               netProfit >= 0 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-red-50 border-red-200'
+                ? 'bg-green-50 dark:bg-green-950/50 border-green-200 dark:border-green-800' 
+                : 'bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-800'
             }`}>
               <p className={`text-sm font-medium ${
-                netProfit >= 0 ? 'text-green-800' : 'text-red-800'
+                netProfit >= 0 ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
               }`}>
                 Чистая прибыль
               </p>
               <p className={`text-2xl font-bold ${
-                netProfit >= 0 ? 'text-green-600' : 'text-red-600'
+                netProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
               }`}>
                 {formatCurrency(netProfit)}
               </p>
