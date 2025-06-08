@@ -1449,47 +1449,6 @@ def get_processing_orders(request):
     return Response(serializer.data)
 
 
-@api_view(['PATCH'])
-@authentication_classes([TokenAuthentication])
-@permission_classes([IsAuthenticated])
-def assign_master(request, order_id):
-    try:
-        order = Order.objects.get(id=order_id, status__in=['новый', 'в обработке'])
-    except Order.DoesNotExist:
-        return Response({'error': 'Order not found or not available for assignment'},
-                        status=status.HTTP_404_NOT_FOUND)
-
-    master_id = request.data.get('assigned_master')
-    if not master_id:
-        return Response({'error': 'Master ID is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        master = CustomUser.objects.get(id=master_id, role='master')
-    except CustomUser.DoesNotExist:
-        return Response({'error': 'Invalid master ID'}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Сохраняем старые значения для логирования
-    old_master = order.assigned_master.email if order.assigned_master else None
-    old_status = order.status
-
-    order.assigned_master = master
-    order.curator = request.user
-    order.status = 'назначен'
-    order.save()
-
-    # Логируем назначение мастера
-    log_order_action(
-        order=order,
-        action='master_assigned',
-        performed_by=request.user,
-        description=f'Мастер {master.email} назначен на заказ #{order.id}',
-        old_value=f'Мастер: {old_master}, Статус: {old_status}',
-        new_value=f'Мастер: {master.email}, Статус: назначен'
-    )
-
-    return Response(OrderSerializer(order).data)
-
-
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
