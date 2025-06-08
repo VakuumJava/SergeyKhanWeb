@@ -128,6 +128,38 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Additional cache files
+*.cache
+.cache/
+cache/
+.tmp/
+tmp/
+temp/
+.temp/
+
+# Node.js cache (if using npm/yarn)
+node_modules/
+.npm
+.yarn-integrity
+.pnp
+.pnp.js
+
+# Browser cache
+.selenium/
+
+# Python cache
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+.Python
+
+# Redis cache
+dump.rdb
+
+# Memcached
+*.pid
+
 # IDE
 .vscode/
 .idea/
