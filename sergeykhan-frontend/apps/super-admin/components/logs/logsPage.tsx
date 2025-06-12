@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Button } from "@workspace/ui/components/button";
-import { Badge } from "@workspace/ui/components/badge";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@workspace/ui/components/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@workspace/ui/components/tabs";
+import { Button } from "@workspace/ui/components/ui";
+import { Badge } from "@workspace/ui/components/ui";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@workspace/ui/components/ui";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@workspace/ui/components/ui";
 import {
     Table,
     TableHeader,
@@ -12,15 +12,15 @@ import {
     TableRow,
     TableHead,
     TableCell,
-} from "@workspace/ui/components/table";
+} from "@workspace/ui/components/ui";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
     DialogDescription,
-} from "@workspace/ui/components/dialog";
-import { ChevronDown, ChevronRight, Eye, FileText, Phone, PhoneOff } from "lucide-react";
+} from "@workspace/ui/components/ui";
+import { ChevronRight, Eye, FileText, Phone, PhoneOff } from "lucide-react";
 import { api } from "@workspace/ui/components/shared/utils/api";
 
 // Types for the data

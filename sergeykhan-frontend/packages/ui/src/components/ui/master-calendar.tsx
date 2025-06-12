@@ -5,9 +5,9 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@workspace/ui/components/dialog";
-import { Input } from "@workspace/ui/components/input";
-import { Button } from "@workspace/ui/components/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
+import { Button } from "@workspace/ui/components/ui";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import axios from "axios";
@@ -339,7 +339,7 @@ export function MasterCalendar({
       )}
 
       {/* Стили календаря */}
-      <style jsx global>{`
+      <style  >{`
         .fc {
           background-color: hsl(var(--background));
           color: hsl(var(--foreground));

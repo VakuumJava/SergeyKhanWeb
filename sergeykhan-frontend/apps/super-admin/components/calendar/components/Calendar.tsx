@@ -5,9 +5,9 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@workspace/ui/components/dialog";
-import { Input } from "@workspace/ui/components/input";
-import { Button } from "@workspace/ui/components/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
+import { Button } from "@workspace/ui/components/ui";
 // import '@workspace/ui/styles/calendar.css'; // Подключаем стили - temporarily disabled
 
 interface CalendarEvent {

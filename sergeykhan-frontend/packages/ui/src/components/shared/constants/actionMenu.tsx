@@ -6,8 +6,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from "@workspace/ui/components/dropdown-menu";
-import { Button } from "@workspace/ui/components/button";
+} from "@workspace/ui/components/ui";
+import { Button } from "@workspace/ui/components/ui";
 import type { Order } from "@shared/constants/orders";
 
 export interface ActionsMenuProps {

@@ -9,24 +9,17 @@ import {
   createColumnHelper,
   ColumnDef,
 } from '@tanstack/react-table';
-import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Alert, AlertDescription } from "@workspace/ui/components/alert";
-import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/ui";
+import { Alert, AlertDescription } from "@workspace/ui/components/ui";
+import { Badge } from "@workspace/ui/components/ui";
 import { 
   Search, 
-  Plus, 
   Edit, 
-  Trash2, 
-  Calendar, 
   Clock, 
   User, 
   AlertCircle, 
-  CheckCircle,
-  Filter,
-  MoreHorizontal
 } from 'lucide-react';
 import axios from 'axios';
 import { API } from '@shared/constants/constants';

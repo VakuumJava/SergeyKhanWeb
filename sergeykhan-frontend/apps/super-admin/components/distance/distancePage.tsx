@@ -1,16 +1,16 @@
 "use client"
 
 import React, { useState, useEffect } from "react";
-import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
-import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
+import { Badge } from "@workspace/ui/components/ui";
 import { 
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@workspace/ui/components/card";
+} from "@workspace/ui/components/ui";
 import { 
   Table, 
   TableBody, 
@@ -18,7 +18,7 @@ import {
   TableHead, 
   TableHeader, 
   TableRow 
-} from "@workspace/ui/components/table";
+} from "@workspace/ui/components/ui";
 import { useDistanceApi } from "../../hooks/useDistanceApi";
 
 interface MasterDistanceInfo {

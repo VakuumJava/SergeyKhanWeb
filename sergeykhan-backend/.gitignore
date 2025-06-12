@@ -61,6 +61,14 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
+# Специфичные пути для app1
+app1/db.sqlite3
+app1/db.sqlite3-journal
+app1/__pycache__/
+app1/*/__pycache__/
+app1/*/*/__pycache__/
+app1/*/*/*/__pycache__/
+
 # Flask stuff:
 instance/
 .webassets-cache

@@ -15,14 +15,14 @@ import {
 import { ChevronDown, CheckCircle, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
+import { Button } from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu";
+} from "@workspace/ui/components/ui";
 import {
   Table,
   TableBody,
@@ -30,23 +30,31 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@workspace/ui/components/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@workspace/ui/components/dialog";
-import { Textarea } from "@workspace/ui/components/textarea";
-import { Separator } from "@workspace/ui/components/separator";
+} from "@workspace/ui/components/ui";
 
 import { Order } from "@workspace/ui/components/shared/constants/orders";
 import OrderCompletionForm from "@shared/orders/completion/OrderCompletionForm";
-import { api } from "@shared/utils/api";
+import { formatOrderForMaster } from "@shared/utils/masterDataUtils";
 
 export function OrdersTakenDataTable({ data, columns }: { data: Order[]; columns: ColumnDef<Order>[] }) {
   const router = useRouter();
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = React.useState<string>("");
-  const [orders, setOrders] = React.useState<Order[]>(data);
+  
+  // Форматируем данные для мастера, скрывая конфиденциальную информацию
+  const [orders, setOrders] = React.useState<Order[]>(() => 
+    data.map(order => formatOrderForMaster(order, 'master'))
+  );
+  
   const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
   const [showCompletionForm, setShowCompletionForm] = React.useState(false);
+
+  // Обновляем данные при изменении входящих данных
+  React.useEffect(() => {
+    const formattedData = data.map(order => formatOrderForMaster(order, 'master'));
+    setOrders(formattedData);
+  }, [data]);
 
   const handleCompleteOrder = (order: Order) => {
     setSelectedOrder(order);
@@ -54,12 +62,11 @@ export function OrdersTakenDataTable({ data, columns }: { data: Order[]; columns
   };
 
   const handleCompletionSuccess = () => {
-    // Обновляем статус заказа локально
     if (selectedOrder) {
       setOrders((prev) =>
         prev.map((order) =>
           order.id === selectedOrder.id
-            ? { ...order, status: "проверяется", completion: { id: 1 } } // Добавляем поле completion
+            ? { ...order, status: "проверяется", completion: { id: 1 } }
             : order
         )
       );

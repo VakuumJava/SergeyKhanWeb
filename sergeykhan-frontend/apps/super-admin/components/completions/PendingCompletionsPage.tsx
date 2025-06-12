@@ -10,10 +10,10 @@ import {
   TableHead,
   TableBody,
   TableCell,
-} from "@workspace/ui/components/table";
-import { Button } from "@workspace/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Badge } from "@workspace/ui/components/badge";
+} from "@workspace/ui/components/ui";
+import { Button } from "@workspace/ui/components/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/ui";
+import { Badge } from "@workspace/ui/components/ui";
 import { Eye, Clock, CheckCircle, AlertCircle } from "lucide-react";
 
 interface OrderCompletion {

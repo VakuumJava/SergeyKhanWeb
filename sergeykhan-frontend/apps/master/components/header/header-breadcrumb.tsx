@@ -8,7 +8,7 @@ import {
     BreadcrumbList,
     BreadcrumbPage,
     BreadcrumbSeparator,
-} from "@workspace/ui/components/breadcrumb"
+} from "@workspace/ui/components/ui"
 import { usePathname } from 'next/navigation'
 
 interface breadcrumbListT {

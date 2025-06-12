@@ -3,18 +3,18 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { API } from "@shared/constants/constants";
-import { Button } from "@workspace/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Badge } from "@workspace/ui/components/badge";
-import { Textarea } from "@workspace/ui/components/textarea";
-import { Label } from "@workspace/ui/components/label";
+import { Button } from "@workspace/ui/components/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/ui";
+import { Badge } from "@workspace/ui/components/ui";
+import { Textarea } from "@workspace/ui/components/ui";
+import { Label } from "@workspace/ui/components/ui";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@workspace/ui/components/dialog";
+} from "@workspace/ui/components/ui";
 import { 
   ArrowLeft, 
   CheckCircle, 

@@ -7,7 +7,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import axios from "axios";
 
-import { Button } from "@workspace/ui/components/button";
+import { Button } from "@workspace/ui/components/ui";
 import {
     Form,
     FormControl,
@@ -15,15 +15,15 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
-} from "@workspace/ui/components/form";
-import { Input } from "@workspace/ui/components/input";
+} from "@workspace/ui/components/ui/form";
+import { Input } from "@workspace/ui/components/ui";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@workspace/ui/components/select";
+} from "@workspace/ui/components/ui";
 import { API } from "@shared/constants/constants";
 
 // Updated validation schema: email, password, and role (master, operator, curator)

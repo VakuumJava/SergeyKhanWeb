@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Order } from "@shared/constants/orders";
 import { API } from "@shared/constants/constants";
+import { formatOrderForMaster, getAddressForMaster, maskPhoneForMaster } from "@shared/utils/masterDataUtils";
 import {
   Table,
   TableHeader,
@@ -11,10 +12,10 @@ import {
   TableHead,
   TableBody,
   TableCell,
-} from "@workspace/ui/components/table";
-import { Button } from "@workspace/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Badge } from "@workspace/ui/components/badge";
+} from "@workspace/ui/components/ui";
+import { Button } from "@workspace/ui/components/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/ui";
+import { Badge } from "@workspace/ui/components/ui";
 import { ArrowLeft, User, Phone, MapPin, FileText, DollarSign, Calendar, CheckCircle } from "lucide-react";
 import OrderCompletionForm from "./OrderCompletionForm";
 
@@ -68,7 +69,9 @@ export default function MasterOrderDetailsClient({ id }: Props) {
       }),
     ])
       .then(([orderData, userData]) => {
-        setOrder(orderData);
+        // Форматируем данные заказа для мастера, скрывая конфиденциальную информацию
+        const formattedOrder = formatOrderForMaster(orderData, 'master', userData.id);
+        setOrder(formattedOrder);
         setCurrentUserId(userData.id);
       })
       .catch((err) => setError(err.message))
@@ -328,16 +331,7 @@ export default function MasterOrderDetailsClient({ id }: Props) {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Телефон</p>
                   <p className="text-lg font-semibold text-muted-foreground italic">
-                    <span className="flex items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                        <line x1="2" y1="2" x2="22" y2="22"></line>
-                        <path d="M16.5 16.5C15.5 17.3 14.1 17.9 12.7 17.9C12.4 17.9 12.1 17.9 11.8 17.8C10 17.5 8.3 16.5 7 15.2C5.5 13.7 4.5 11.7 4.2 9.8C4.1 9.3 4 8.7 4 8.2C4.1 6.8 4.8 5.5 5.6 4.5"></path>
-                        <path d="M18 6C18.9 7 19.5 8.2 19.6 9.5C19.6 9.9 19.6 10.3 19.5 10.7"></path>
-                        <path d="M15.5 3.3C16.4 3.5 17.2 3.9 17.9 4.3"></path>
-                        <path d="M12.2 3C12.6 3 13 3 13.4 3.1"></path>
-                      </svg>
-                      Скрыто для мастеров
-                    </span>
+                    {maskPhoneForMaster(order.client_phone)}
                   </p>
                 </div>
               </div>
@@ -348,7 +342,7 @@ export default function MasterOrderDetailsClient({ id }: Props) {
                 <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Адрес</p>
-                  <p className="text-lg font-semibold">{getDisplayAddress(order) || 'Не указан'}</p>
+                  <p className="text-lg font-semibold">{getAddressForMaster(order, 'master', isMyOrder)}</p>
                 </div>
               </div>
 

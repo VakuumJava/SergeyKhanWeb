@@ -18,9 +18,9 @@ import {
   VisibilityState,
   flexRender,
 } from "@tanstack/react-table";
-import { Checkbox } from "@workspace/ui/components/checkbox";
-import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
+import { Checkbox } from "@workspace/ui/components/ui";
+import { Button } from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
 import {
   Dialog,
   DialogTrigger,
@@ -29,7 +29,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
-} from "@workspace/ui/components/dialog";
+} from "@workspace/ui/components/ui";
 import {
   Table,
   TableBody,
@@ -37,7 +37,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@workspace/ui/components/table";
+} from "@workspace/ui/components/ui";
 import { Minus, Plus, ChevronDown, X } from "lucide-react";
 import { OrdersDataTableProps } from "@shared/constants/orders";
 import {
@@ -45,7 +45,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu";
+} from "@workspace/ui/components/ui";
 import ActiveOrders from "@shared/orders/ActiveOrders";
 import AllOrders from "@shared/orders/AllOrders";
 

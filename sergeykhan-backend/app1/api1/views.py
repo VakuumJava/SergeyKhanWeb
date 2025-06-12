@@ -650,22 +650,29 @@ def approve_completed_order(request, order_id):
         new_value='Статус: одобрен'
     )
 
-    distribution = ProfitDistribution.objects.first()
+    # Используем новые настройки ProfitDistributionSettings
+    settings = ProfitDistributionSettings.get_settings()
     profit = order.final_cost - order.expenses
     profit = max(profit, 0)
 
     master = order.transferred_to or order.assigned_master
 
-    # Расчёт долей
-    master_share = profit * Decimal(distribution.master_percent) / 100
-    curator_share = profit * Decimal(distribution.curator_percent) / 100 if order.curator else 0
-    operator_share = profit * Decimal(distribution.operator_percent) / 100 if order.operator else 0
+    # Расчёт долей с использованием актуальных настроек
+    master_paid_percent = settings.master_paid_percent
+    master_balance_percent = settings.master_balance_percent
+    total_master_percent = master_paid_percent + master_balance_percent
+    curator_percent = settings.curator_percent
+    
+    # Мастеру платим по сумме двух процентов (наличные + баланс)
+    master_share = profit * Decimal(total_master_percent) / 100
+    curator_share = profit * Decimal(curator_percent) / 100 if order.curator else 0
+    operator_share = 0  # Оператору процент не выделяется в новых настройках
 
     # Распределяем выплаты и логируем
-    for user, amount, action, role in [
-        (master, master_share, 'earn_master', 'мастеру'),
-        (order.curator, curator_share, 'earn_curator', 'куратору'),
-        (order.operator, operator_share, 'earn_operator', 'оператору'),
+    for user, amount, action, role, percent in [
+        (master, master_share, 'earn_master', 'мастеру', total_master_percent),
+        (order.curator, curator_share, 'earn_curator', 'куратору', curator_percent),
+        (order.operator, operator_share, 'earn_operator', 'оператору', 0),
     ]:
         if user and amount > 0:
             balance, _ = Balance.objects.get_or_create(user=user, defaults={'amount': Decimal('0.00')})
@@ -673,15 +680,21 @@ def approve_completed_order(request, order_id):
             balance.amount += amount
             balance.save()
             
-            # Логируем в BalanceLog
-            BalanceLog.objects.create(user=user, action=action, amount=amount)
+            # Логируем в BalanceLog с динамическим процентом
+            BalanceLog.objects.create(
+                user=user,
+                action_type='top_up',  # Используем обновленное поле action_type вместо устаревшего action
+                action=action,  # Для обратной совместимости
+                amount=amount,
+                reason=f'Выплата {role} за заказ #{order.id} ({percent}%)'
+            )
             
             # Логируем в TransactionLog
             log_transaction(
                 user=user,
                 transaction_type='profit_distribution',
                 amount=amount,
-                description=f'Выплата {role} за заказ #{order.id}. Баланс: {old_balance} → {balance.amount}',
+                description=f'Выплата {role} за заказ #{order.id} ({percent}%). Баланс: {old_balance} → {balance.amount}',
                 order=order,
                 performed_by=request.user
             )
@@ -1013,11 +1026,14 @@ def distribute_profits(order: Order):
     curator = order.curator
     total = order.final_cost
 
-    dist = ProfitDistribution.objects.first()
-    cash_percent = dist.master_percent // 2 if dist else 30
-    balance_percent = dist.master_percent // 2 if dist else 30
-    curator_percent = dist.curator_percent if dist else 5
-    kassa_percent = dist.kassa if dist else 35
+    # Используем новые настройки ProfitDistributionSettings
+    settings = ProfitDistributionSettings.get_settings()
+    
+    # Получаем проценты из настроек
+    cash_percent = settings.master_paid_percent
+    balance_percent = settings.master_balance_percent
+    curator_percent = settings.curator_percent
+    kassa_percent = settings.company_percent
 
     cash_amount = (Decimal(cash_percent) / 100) * total
     balance_amount = (Decimal(balance_percent) / 100) * total
@@ -1030,12 +1046,27 @@ def distribute_profits(order: Order):
         master_balance.amount += balance_amount
         master_balance.save()
 
-        # Log master income
-        BalanceLog.objects.create(user=master, action="Начисление на баланс (30%)", amount=balance_amount)
-        BalanceLog.objects.create(user=master, action="Наличные (30%)", amount=cash_amount)
+        # Log master income с динамическими процентами
+        BalanceLog.objects.create(
+            user=master, 
+            action_type='top_up',
+            reason=f"Начисление на баланс ({balance_percent}%)", 
+            amount=balance_amount
+        )
+        BalanceLog.objects.create(
+            user=master, 
+            action_type='top_up',
+            reason=f"Наличные ({cash_percent}%)", 
+            amount=cash_amount
+        )
 
-        # Log curator salary
-        BalanceLog.objects.create(user=curator, action="Зарплата за заказ (5%)", amount=curator_salary)
+        # Log curator salary с динамическими процентами
+        BalanceLog.objects.create(
+            user=curator, 
+            action_type='top_up',
+            reason=f"Зарплата за заказ ({curator_percent}%)", 
+            amount=curator_salary
+        )
 
         # Update kassa
         kassa = CompanyBalance.get_instance()
@@ -1774,6 +1805,18 @@ def get_master_available_orders(request):
     return Response(serializer.data)
 
 
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_orders_new(request):
+    """
+    Получить список заказов со статусом 'новый'
+    """
+    orders = Order.objects.filter(status='новый').order_by('-created_at')
+    serializer = OrderSerializer(orders, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
 # ----------------------------------------
 #  Завершение заказов мастерами
 # ----------------------------------------
@@ -1781,14 +1824,14 @@ def get_master_available_orders(request):
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-@role_required([ROLES['MASTER']])
+@role_required([ROLES['MASTER'], ROLES['SUPER_ADMIN']])
 def complete_order(request, order_id):
     """Завершение заказа мастером"""
     try:
         order = Order.objects.get(id=order_id)
         
-        # Проверяем, что заказ назначен текущему мастеру
-        if order.assigned_master != request.user:
+        # Проверяем, что заказ назначен текущему мастеру (только для роли мастера)
+        if request.user.role == ROLES['MASTER'] and order.assigned_master != request.user:
             return Response({
                 'error': 'Заказ не назначен вам'
             }, status=status.HTTP_403_FORBIDDEN)

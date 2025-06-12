@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API } from '@shared/constants/constants';
-import { Button } from '../../button';
-import { Input } from '../../input';
-import { Label } from '../../label';
-import { Textarea } from '../../textarea';
+import { Button } from '@workspace/ui/components/ui';
+import { Input } from '@workspace/ui/components/ui';
+import { Label } from '@workspace/ui/components/ui';
+import { Textarea } from '@workspace/ui/components/ui';
 import {
     Dialog,
     DialogContent,
@@ -15,16 +15,16 @@ import {
     DialogTrigger,
     DialogFooter,
     DialogClose,
-} from '../../dialog';
+} from '@workspace/ui/components/ui';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '../../select';
-import { Card, CardContent, CardHeader, CardTitle } from '../../card';
-import { Badge } from '../../badge';
+} from '@workspace/ui/components/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/ui';
+import { Badge } from '@workspace/ui/components/ui';
 import { Loader2, Plus, Minus, History, Wallet, PiggyBank } from 'lucide-react';
 
 interface BalanceData {

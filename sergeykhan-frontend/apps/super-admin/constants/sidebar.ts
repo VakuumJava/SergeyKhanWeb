@@ -4,7 +4,7 @@ import {
     UserPlus,
     ChartColumn,
     Headset, Anvil,
-    UserSearch, Percent, Podcast, FileClock, Wallet, User, CalendarPlus, Users, CheckCircle
+    UserSearch, Percent, Podcast, FileClock, Wallet, User, CalendarPlus, Users, CheckCircle, Settings
 } from 'lucide-react';
 
 export const sidebar_items = [
@@ -84,6 +84,16 @@ export const sidebar_items = [
           title: "Абоненты",
           url: "/abonents",
           icon: User,
+        },
+      ],
+    },
+    {
+      name: "Настройки",
+      list: [
+        {
+          title: "Управление настройками",
+          url: "/settings",
+          icon: Settings,
         },
       ],
     }

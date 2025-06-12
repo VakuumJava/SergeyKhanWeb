@@ -60,6 +60,7 @@ urlpatterns = [
     path('api/balance/all/', get_all_balances, name='get_all_balances'),
     path('api/user/', get_user_by_token, name='get_user_by_token'),
     path('api/users/create/', create_user, name='create_user'),
+    path('api/orders/new/', get_orders_new, name='get_orders_new'),
     path('api/orders/all/', get_all_orders, name='all_orders'),
     path('api/orders/last-4hours/', get_orders_last_4hours, name='orders_last_4hours'),
     path('api/orders/last-day/', get_orders_last_day, name='orders_last_day'),    path('api/orders/active/', get_active_orders, name='active_orders'),

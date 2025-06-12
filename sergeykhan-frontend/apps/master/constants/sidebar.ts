@@ -33,11 +33,6 @@ export const sidebar_items = [
                 title: "Финансы",
                 url: "/finance",
                 icon: ChartColumn,
-            },
-            {
-                title: "Звонки",
-                url: "/call",
-                icon: Phone,
             }
         ]
     },

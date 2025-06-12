@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
+import { Button } from "@workspace/ui/components/ui";
 import {
   Dialog,
   DialogTrigger,
@@ -12,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
-} from "@workspace/ui/components/dialog";
+} from "@workspace/ui/components/ui";
 import { HistoryPayments } from "@shared/finances/chartFinances/historyPayments";
 import { Master } from "@shared/constants/types";
 import { API } from "@shared/constants/constants";

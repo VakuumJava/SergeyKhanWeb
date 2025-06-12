@@ -138,6 +138,33 @@ class Order(models.Model):
     scheduled_date = models.DateField(null=True, blank=True, verbose_name='Дата выполнения')
     scheduled_time = models.TimeField(null=True, blank=True, verbose_name='Время выполнения')
     
+    # Дополнительные поля заказа
+    service_type = models.CharField(max_length=100, null=True, blank=True, verbose_name='Тип услуги')
+    equipment_type = models.CharField(max_length=100, null=True, blank=True, verbose_name='Тип оборудования')
+    age = models.PositiveIntegerField(null=True, blank=True, verbose_name='Возраст клиента')
+    promotion = models.CharField(max_length=255, null=True, blank=True, verbose_name='Акции')
+    due_date = models.DateField(null=True, blank=True, verbose_name='Срок исполнения')
+    
+    # Планирование и дополнительная информация
+    PRIORITY_CHOICES = (
+        ('низкий', 'Низкий'),
+        ('обычный', 'Обычный'),
+        ('высокий', 'Высокий'),
+        ('срочный', 'Срочный'),
+    )
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='обычный', verbose_name='Приоритет')
+    
+    PAYMENT_METHOD_CHOICES = (
+        ('наличные', 'Наличные'),
+        ('карта', 'Банковская карта'),
+        ('перевод', 'Банковский перевод'),
+        ('элсом', 'Элсом'),
+        ('mbанк', 'МБанк'),
+    )
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='наличные', verbose_name='Способ оплаты')
+    notes = models.TextField(null=True, blank=True, verbose_name='Дополнительные заметки')
+    
+    # Financial fields
     estimated_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     final_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     expenses = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -600,15 +627,16 @@ class OrderCompletion(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
     status = models.CharField(max_length=20, choices=COMPLETION_STATUS_CHOICES, default='ожидает_проверки', verbose_name="Статус")
-    
-    # Проверка куратором
+      # Проверка куратором
     curator = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_completions', limit_choices_to={'role': 'curator'})
     review_date = models.DateTimeField(null=True, blank=True, verbose_name="Дата проверки")
     curator_notes = models.TextField(blank=True, null=True, verbose_name="Заметки куратора")
-      # Распределение средств
+    
+    # Распределение средств
     is_distributed = models.BooleanField(default=False, verbose_name="Средства распределены")
     
-    def save(self, *args, **kwargs):        # Автоматический расчет общих расходов и чистой прибыли
+    def save(self, *args, **kwargs):
+        # Автоматический расчет общих расходов и чистой прибыли
         self.total_expenses = self.parts_expenses + self.transport_costs
         self.net_profit = self.total_received - self.total_expenses
         super().save(*args, **kwargs)
@@ -621,13 +649,13 @@ class OrderCompletion(models.Model):
         # Получаем настройки распределения
         settings = ProfitDistributionSettings.get_settings()
         
-        # Используем настройки из второго этапа (распределение финансов куратором)
-        master_immediate = self.net_profit * (Decimal(settings.cash_percent) / 100)
-        master_deferred = self.net_profit * (Decimal(settings.balance_percent) / 100)
+        # Используем новые поля для распределения
+        master_immediate = self.net_profit * (Decimal(settings.master_paid_percent) / 100)
+        master_deferred = self.net_profit * (Decimal(settings.master_balance_percent) / 100)
         master_total = master_immediate + master_deferred
         
         # Доля компании
-        company_share = self.net_profit * (Decimal(settings.final_kassa_percent) / 100)
+        company_share = self.net_profit * (Decimal(settings.company_percent) / 100)
         
         # Доля куратору
         curator_share = self.net_profit * (Decimal(settings.curator_percent) / 100)
@@ -639,10 +667,10 @@ class OrderCompletion(models.Model):
             'company_share': company_share,
             'curator_share': curator_share,
             'settings_used': {
-                'cash_percent': settings.cash_percent,
-                'balance_percent': settings.balance_percent,
+                'master_paid_percent': settings.master_paid_percent,
+                'master_balance_percent': settings.master_balance_percent,
                 'curator_percent': settings.curator_percent,
-                'final_kassa_percent': settings.final_kassa_percent
+                'company_percent': settings.company_percent
             }
         }
     

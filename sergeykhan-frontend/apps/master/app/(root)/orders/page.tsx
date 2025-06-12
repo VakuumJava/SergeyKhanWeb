@@ -1,18 +1,5 @@
-// import NewOrders from '@/components/orders/(beta-orders)/newOrders'
-import React from 'react'
-import MasterOrdersPage from "@/components/orders/MasterOrdersPage";
-// import OrdersTab from "@workspace/ui/components/shared/orders/OrdersTab";
-// import ActiveOrders from "@/components/orders/ActiveOrders";
+import OrdersTab from "@shared/orders/OrdersTab";
 
-const Orders = () => {
-  return (
-    <div>
-      {/*<NewOrders></NewOrders>*/}
-      {/*  <ActiveOrders/>*/}
-      {/* <OrdersTab status={'master'} accessStatus={'pro'}></OrdersTab> */}
-      <MasterOrdersPage />
-    </div>
-  )
+export default function OrdersPage() {
+  return <OrdersTab status={'master'} accessStatus={'pro'} />;
 }
-
-export default Orders

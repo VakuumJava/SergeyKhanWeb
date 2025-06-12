@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
-import { Textarea } from "@workspace/ui/components/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui/components/popover";
-import { Calendar } from "@workspace/ui/components/calendar";
-import { UserPlus, CalendarIcon } from 'lucide-react';
+import { Button } from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
+import { Label } from "@workspace/ui/components/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/ui";
+import { Textarea } from "@workspace/ui/components/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui/components/ui";
+import { Calendar } from "@workspace/ui/components/ui";
+import { UserPlus, CalendarIcon, Clock, AlertCircle, CreditCard, FileText } from 'lucide-react';
 import { format } from "date-fns";
 import axios from 'axios';
 import { API } from '@shared/constants/constants';
@@ -17,7 +17,10 @@ import { API } from '@shared/constants/constants';
 interface OrderFormData {
   client_name: string;
   client_phone: string;
-  client_address: string;
+  street: string;
+  house_number: string;
+  apartment: string;
+  entrance: string;
   service_type: string;
   description: string;
   age: number;
@@ -28,13 +31,22 @@ interface OrderFormData {
   estimated_cost: number;
   final_cost: number;
   expenses: number;
+  // Дополнительные поля для расширенной информации о заказе
+  scheduled_date: string;
+  scheduled_time: string;
+  priority: string;
+  payment_method: string;
+  notes: string;
 }
 
 const UnifiedOrderCreation: React.FC = () => {
   const [formData, setFormData] = useState<OrderFormData>({
     client_name: '',
     client_phone: '',
-    client_address: '',
+    street: '',
+    house_number: '',
+    apartment: '',
+    entrance: '',
     service_type: '',
     description: '',
     age: 0,
@@ -45,6 +57,12 @@ const UnifiedOrderCreation: React.FC = () => {
     estimated_cost: 0,
     final_cost: 0,
     expenses: 0,
+    // Дополнительные поля
+    scheduled_date: '',
+    scheduled_time: '',
+    priority: 'обычный',
+    payment_method: 'наличные',
+    notes: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -65,9 +83,13 @@ const UnifiedOrderCreation: React.FC = () => {
       const payload = {
         client_name: formData.client_name,
         client_phone: formData.client_phone,
-        address: formData.client_address,
+        street: formData.street,
+        house_number: formData.house_number,
+        apartment: formData.apartment,
+        entrance: formData.entrance,
         age: formData.age,
         equipment_type: formData.equipment_type,
+        service_type: formData.service_type,
         price: Number(formData.price).toFixed(2),
         promotion: formData.promotion,
         due_date: formData.due_date,
@@ -79,6 +101,12 @@ const UnifiedOrderCreation: React.FC = () => {
         estimated_cost: formData.estimated_cost || (formData.price * 0.9).toFixed(2),
         final_cost: formData.final_cost || Number(formData.price).toFixed(2),
         expenses: formData.expenses || (formData.price - formData.price * 0.9).toFixed(2),
+        // Дополнительные поля
+        scheduled_date: formData.scheduled_date || null,
+        scheduled_time: formData.scheduled_time || null,
+        priority: formData.priority,
+        payment_method: formData.payment_method,
+        notes: formData.notes,
       };
       
       console.log('Отправляем данные на сервер:', payload);
@@ -99,7 +127,10 @@ const UnifiedOrderCreation: React.FC = () => {
       setFormData({
         client_name: '',
         client_phone: '',
-        client_address: '',
+        street: '',
+        house_number: '',
+        apartment: '',
+        entrance: '',
         service_type: '',
         description: '',
         age: 0,
@@ -110,6 +141,11 @@ const UnifiedOrderCreation: React.FC = () => {
         estimated_cost: 0,
         final_cost: 0,
         expenses: 0,
+        scheduled_date: '',
+        scheduled_time: '',
+        priority: 'обычный',
+        payment_method: 'наличные',
+        notes: '',
       });
       setSelectedDate(undefined);
       
@@ -185,14 +221,42 @@ const UnifiedOrderCreation: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="client_address">Адрес клиента *</Label>
-              <Input
-                id="client_address"
-                placeholder="Введите адрес клиента"
-                value={formData.client_address}
-                onChange={(e) => handleFieldChange('client_address', e.target.value)}
-              />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="street_address">Адрес: улица, район, дом *</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    id="street"
+                    placeholder="Улица, район"
+                    value={formData.street}
+                    onChange={(e) => handleFieldChange('street', e.target.value)}
+                  />
+                  <Input
+                    id="house_number"
+                    placeholder="Номер дома"
+                    value={formData.house_number}
+                    onChange={(e) => handleFieldChange('house_number', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="apartment_entrance">Подъезд, квартира</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    id="entrance"
+                    placeholder="Подъезд"
+                    value={formData.entrance}
+                    onChange={(e) => handleFieldChange('entrance', e.target.value)}
+                  />
+                  <Input
+                    id="apartment"
+                    placeholder="Квартира"
+                    value={formData.apartment}
+                    onChange={(e) => handleFieldChange('apartment', e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -322,6 +386,109 @@ const UnifiedOrderCreation: React.FC = () => {
               </div>
             </div>
 
+            {/* Дополнительная информация о заказе */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Планирование и дополнительная информация
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Дата выполнения</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.scheduled_date ? format(new Date(formData.scheduled_date), "PPP") : "Выберите дату"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start">
+                      <Calendar 
+                        mode="single"
+                        selected={formData.scheduled_date ? new Date(formData.scheduled_date) : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            handleFieldChange('scheduled_date', format(date, "yyyy-MM-dd"));
+                          }
+                        }}
+                        initialFocus 
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="scheduled_time">Время выполнения</Label>
+                  <Input
+                    id="scheduled_time"
+                    type="time"
+                    value={formData.scheduled_time}
+                    onChange={(e) => handleFieldChange('scheduled_time', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="priority">
+                    <AlertCircle className="h-4 w-4 inline mr-2" />
+                    Приоритет заказа
+                  </Label>
+                  <Select
+                    value={formData.priority}
+                    onValueChange={(value) => handleFieldChange('priority', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Выберите приоритет" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="низкий">Низкий</SelectItem>
+                      <SelectItem value="обычный">Обычный</SelectItem>
+                      <SelectItem value="высокий">Высокий</SelectItem>
+                      <SelectItem value="срочный">Срочный</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payment_method">
+                    <CreditCard className="h-4 w-4 inline mr-2" />
+                    Способ оплаты
+                  </Label>
+                  <Select
+                    value={formData.payment_method}
+                    onValueChange={(value) => handleFieldChange('payment_method', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Выберите способ оплаты" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="наличные">Наличные</SelectItem>
+                      <SelectItem value="карта">Банковская карта</SelectItem>
+                      <SelectItem value="перевод">Банковский перевод</SelectItem>
+                      <SelectItem value="элсом">Элсом</SelectItem>
+                      <SelectItem value="mbанк">МБанк</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">
+                  <FileText className="h-4 w-4 inline mr-2" />
+                  Дополнительные заметки
+                </Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Особые требования, дополнительная информация..."
+                  value={formData.notes}
+                  onChange={(e) => handleFieldChange('notes', e.target.value)}
+                  className="min-h-20"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="description">Описание заказа</Label>
               <Textarea
@@ -337,7 +504,7 @@ const UnifiedOrderCreation: React.FC = () => {
             <div className="flex gap-4 pt-6">
               <Button
                 onClick={submitForm}
-                disabled={submitting || !formData.client_name || !formData.client_phone || !formData.client_address || !formData.service_type || !formData.equipment_type || !formData.price || !formData.due_date}
+                disabled={submitting || !formData.client_name || !formData.client_phone || !formData.street || !formData.house_number || !formData.service_type || !formData.equipment_type || !formData.price || !formData.due_date}
                 className="flex-1"
               >
                 {submitting ? (
@@ -359,7 +526,10 @@ const UnifiedOrderCreation: React.FC = () => {
                   setFormData({
                     client_name: '',
                     client_phone: '',
-                    client_address: '',
+                    street: '',
+                    house_number: '',
+                    apartment: '',
+                    entrance: '',
                     service_type: '',
                     description: '',
                     age: 0,
@@ -370,6 +540,11 @@ const UnifiedOrderCreation: React.FC = () => {
                     estimated_cost: 0,
                     final_cost: 0,
                     expenses: 0,
+                    scheduled_date: '',
+                    scheduled_time: '',
+                    priority: 'обычный',
+                    payment_method: 'наличные',
+                    notes: '',
                   });
                   setSelectedDate(undefined);
                 }}

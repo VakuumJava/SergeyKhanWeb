@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@workspace/ui/components/button";
-import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/ui";
+import { Badge } from "@workspace/ui/components/ui";
 import { 
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@workspace/ui/components/card";
+} from "@workspace/ui/components/ui";
 import { Eye } from "lucide-react";
 import { useDistanceApi } from "@/hooks/useDistanceApi";
 interface Order {

@@ -10,8 +10,8 @@ import {
   TableHead,
   TableBody,
   TableCell,
-} from "@workspace/ui/components/table";
-import { Button } from "@workspace/ui/components/button";
+} from "@workspace/ui/components/ui";
+import { Button } from "@workspace/ui/components/ui";
 import {
   Dialog,
   DialogTrigger,
@@ -20,15 +20,15 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
-} from "@workspace/ui/components/dialog";
-import { Input } from "@workspace/ui/components/input";
+} from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@workspace/ui/components/select";
+} from "@workspace/ui/components/ui";
 import { ActionsMenu } from "@workspace/ui/components/shared/constants/actionMenu";
 import OrderCompletionForm from "@shared/orders/completion/OrderCompletionForm";
 

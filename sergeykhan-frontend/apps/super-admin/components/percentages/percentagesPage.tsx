@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from "react";
-import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
+import { Button } from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
 import { api } from "@shared/utils/api";
 
 const PercentagesPage = () => {

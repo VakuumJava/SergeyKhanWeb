@@ -1,6 +1,6 @@
 // @ts-ignore
 import { ColumnDef } from "@tanstack/react-table";
-import { Button } from "@workspace/ui/components/button";
+import { Button } from "@workspace/ui/components/ui";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -8,7 +8,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu";
+} from "@workspace/ui/components/ui";
 import { MoreHorizontal } from "lucide-react";
 // import Link from "next/link";
 import {ActionsMenu} from "@workspace/ui/components/shared/constants/actionMenu";
@@ -29,21 +29,49 @@ export interface Order {
     client_phone: string;
     description: string;
     address: string;
-    // New address fields from backend
+    
+    // Address fields
     street?: string;
     house_number?: string;
     apartment?: string;
     entrance?: string;
     public_address?: string;  // Street + house number only (for masters before taking)
     full_address?: string;    // Complete address including apartment/entrance (for taken orders)
-    created_at: string;        // ISO‑строка
-    assigned_master: string | null;
-    estimated_cost: string;    // если нужно
-    expenses: string;          // если нужно
-    final_cost: string;
+    
+    // Status and assignment
     status: string;
-    completion?: any;          // Поле для проверки наличия записи о завершении
-    // + любые другие поля, которые приходят
+    assigned_master: string | null;
+    operator?: string | null;
+    curator?: string | null;
+    transferred_to?: string | null;
+    
+    // Scheduling
+    scheduled_date?: string;
+    scheduled_time?: string;
+    
+    // Financial
+    estimated_cost: string;
+    final_cost: string;
+    expenses: string;
+    
+    // Priority and payment
+    priority?: string;
+    payment_method?: string;
+    notes?: string;
+    
+    // Additional fields from form
+    age?: number;
+    equipment_type?: string;
+    service_type?: string;
+    promotion?: string;
+    due_date?: string;
+    
+    // Timestamps
+    created_at: string;
+    
+    // Other
+    is_test?: boolean;
+    completion?: any;  // Поле для проверки наличия записи о завершении
 }
 
 export interface OrdersDataTableProps {

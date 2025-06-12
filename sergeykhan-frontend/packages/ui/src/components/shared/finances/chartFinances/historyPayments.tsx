@@ -8,7 +8,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@workspace/ui/components/pagination"
+} from "@workspace/ui/components/ui"
 import {
   Table,
   TableBody,
@@ -16,7 +16,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@workspace/ui/components/table"
+} from "@workspace/ui/components/ui"
 
 const ITEMS_PER_PAGE = 4
 
@@ -31,11 +31,6 @@ type BalanceLog = {
   created_at: string
 }
 
-/**
- * Компонент истории платежей.
- * Таблица в фиксированном по высоте контейнере,
- * пагинация закреплена внизу.
- */
 export function HistoryPayments({ userId }: HistoryPaymentsProps) {
   const [logs, setLogs] = useState<BalanceLog[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -68,7 +63,6 @@ export function HistoryPayments({ userId }: HistoryPaymentsProps) {
 
   return (
       <div className="h-full flex flex-col">
-        {/* Скроллируемая часть таблицы */}
         <div className="overflow-y-auto flex-grow">
           <Table>
             <TableHeader>
@@ -90,7 +84,6 @@ export function HistoryPayments({ userId }: HistoryPaymentsProps) {
           </Table>
         </div>
 
-        {/* Пагинация всегда внизу контейнера */}
         <div className="p-4">
           <Pagination>
             <PaginationContent>

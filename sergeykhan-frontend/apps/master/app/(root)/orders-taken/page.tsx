@@ -1,10 +1,5 @@
-import React from 'react';
-import OrdersTakenPage from "@shared/orders/orders-taken/ordersTakenPage";
+import OrdersTakenTab from "@workspace/ui/components/shared/orders/orders-taken/OrdersTakenTab";
 
-const Page = () => {
-  return (
-      <OrdersTakenPage/>
-  );
-};
-
-export default Page;
+export default function OrdersTakenPage() {
+  return <OrdersTakenTab status={'master'} accessStatus={'pro'} />;
+}

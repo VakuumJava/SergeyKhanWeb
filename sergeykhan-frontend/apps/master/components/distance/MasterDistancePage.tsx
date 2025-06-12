@@ -1,16 +1,17 @@
 "use client"
 
 import React, { useState, useEffect } from "react";
-import { Button } from "@workspace/ui/components/button";
-import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/ui";
+import { Badge } from "@workspace/ui/components/ui";
 import { 
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@workspace/ui/components/card";
+} from "@workspace/ui/components/ui";
 import { useDistanceApi } from "@/hooks/useDistanceApi";
+import { formatOrderForMaster, getAddressForMaster, maskPhoneForMaster } from "@shared/utils/masterDataUtils";
 interface Order {
   id: number;
   client_name: string;
@@ -25,6 +26,7 @@ interface Order {
   public_address?: string;  // Street + house number only (for masters before taking)
   full_address?: string;    // Complete address including apartment/entrance (for taken orders)
   status: string;
+  estimated_cost?: string;  // Added estimated_cost field
   final_cost?: string;  // Changed from number to string to match backend
   created_at: string;
   assigned_master?: string | null;
@@ -328,11 +330,16 @@ const MasterDistancePage = () => {
                                             <div className="space-y-1">
                                                 <p className="text-sm font-medium text-muted-foreground">Клиент</p>
                                                 <p className="font-medium">{order.client_name}</p>
-                                                <p className="text-sm text-muted-foreground">{order.client_phone}</p>
+                                                <p className="text-sm text-muted-foreground">{maskPhoneForMaster(order.client_phone)}</p>
                                             </div>
                                             <div className="space-y-1">
                                                 <p className="text-sm font-medium text-muted-foreground">Адрес</p>
-                                                <p className="font-medium">{getDisplayAddress(order)}</p>
+                                                <p className="font-medium">{getAddressForMaster({
+                                                    ...order,
+                                                    address: order.address || '',
+                                                    estimated_cost: order.estimated_cost || '',
+                                                    expenses: ''
+                                                } as any, 'master', false)}</p>
                                             </div>
                                         </div>                                        <div className="space-y-3">
                                             <div>

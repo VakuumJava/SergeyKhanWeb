@@ -14,15 +14,15 @@ import {
 } from "@tanstack/react-table";
 import { ChevronDown } from "lucide-react";
 
-import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
+import { Button } from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuTrigger,
     DropdownMenuItem,
-} from "@workspace/ui/components/dropdown-menu";
+} from "@workspace/ui/components/ui";
 import {
     Table,
     TableBody,
@@ -30,7 +30,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@workspace/ui/components/table";
+} from "@workspace/ui/components/ui";
 
 interface Curator {
     id: string;

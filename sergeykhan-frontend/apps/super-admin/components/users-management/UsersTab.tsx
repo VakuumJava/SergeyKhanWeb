@@ -3,13 +3,19 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "@shared/constants/constants";
-import ContentLayout from "./ContentLayout";
-import { Button } from "@workspace/ui/components/button";
+import { 
+    Button,
+    Card,
+    CardHeader,
+    CardContent,
+    CardTitle,
+    Badge
+} from "@workspace/ui/components/ui";
+import { Users, Clock } from "lucide-react";
 
 import MastersTable from "@/components/users-management/mastersTable";
 import CuratorsTable from "@/components/users-management/curatorsTable";
 import OperatorsTable from "@/components/users-management/operatorsTable";
-import { ContentLayoutBg } from "@/constants/constants";
 
 type UsersTypeT = "curator" | "master" | "operator";
 
@@ -90,39 +96,82 @@ const UsersTab = () => {
         }
     };
 
+    const getTabTitle = () => {
+        switch (usersType) {
+            case "curator": return "Кураторы";
+            case "master": return "Мастера";
+            case "operator": return "Операторы";
+            default: return "Персонал";
+        }
+    };
+
+    const getTabDescription = () => {
+        switch (usersType) {
+            case "curator": return "Управление кураторами и их доступами";
+            case "master": return "Управление мастерами компании";
+            case "operator": return "Управление операторами системы";
+            default: return "Управление персоналом";
+        }
+    };
+
     if (loading) {
-        return <div>Loading...</div>;
+        return (
+            <div className="container mx-auto p-6">
+                <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                    <p className="text-muted-foreground">Загрузка данных персонала...</p>
+                </div>
+            </div>
+        );
     }
 
     return (
-        <ContentLayout
-            title={
-                <div className="flex flex-row gap-3">
-                    {availableTabs.map((tab) => (
-                        <Button
-                            key={tab}
-                            variant={usersType === tab ? "default" : "outline"}
-                            onClick={() => handleClick(tab)}
-                        >
-                            {tab === "master"
-                                ? "Masters"
-                                : tab === "curator"
-                                    ? "Curators"
-                                    : tab === "operator"
-                                        ? "Operators"
-                                        : capitalize(tab)}
-                        </Button>
-                    ))}
+        <div className="container mx-auto p-6 space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">
+                        {getTabTitle()}
+                    </h1>
+                    <p className="text-muted-foreground">
+                        {getTabDescription()}
+                    </p>
                 </div>
-            }
-            bg={
-                typeof window !== "undefined" && window.innerWidth < 768
-                    ? ContentLayoutBg.Transperent
-                    : ContentLayoutBg.Black
-            }
-        >
-            {renderContent()}
-        </ContentLayout>
+                <Badge variant="secondary" className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    {staffData.length} сотрудников
+                </Badge>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex flex-row gap-3">
+                {availableTabs.map((tab) => (
+                    <Button
+                        key={tab}
+                        variant={usersType === tab ? "default" : "outline"}
+                        onClick={() => handleClick(tab)}
+                    >
+                        {tab === "master"
+                            ? "Мастера"
+                            : tab === "curator"
+                                ? "Кураторы"
+                                : tab === "operator"
+                                    ? "Операторы"
+                                    : capitalize(tab)}
+                    </Button>
+                ))}
+            </div>
+
+            {/* Content */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>{getTabTitle()}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {renderContent()}
+                </CardContent>
+            </Card>
+        </div>
     );
 };
 

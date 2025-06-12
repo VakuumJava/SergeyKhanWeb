@@ -9,7 +9,7 @@ import {
     Sidebar,
     SidebarFooter,
     SidebarHeader,
-} from "@workspace/ui/components/sidebar";
+} from "@workspace/ui/components/ui";
 import SidebarItems from "./sidebar-items";
 import SidebarUser from "./sidebar-user";
 

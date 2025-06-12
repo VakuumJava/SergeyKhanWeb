@@ -4,10 +4,10 @@ import * as React from "react"
 import { BarChart, Bar, CartesianGrid, XAxis } from "recharts"
 import {
   Card, CardHeader, CardTitle, CardDescription, CardContent
-} from "@workspace/ui/components/card"
+} from "@workspace/ui/components/ui"
 import {
   ChartContainer, ChartTooltip, ChartTooltipContent
-} from "@workspace/ui/components/chart"
+} from "@workspace/ui/components/ui"
 import { API } from "@shared/constants/constants"
 
 type Log = { id: number; action: string; amount: number; created_at: string }

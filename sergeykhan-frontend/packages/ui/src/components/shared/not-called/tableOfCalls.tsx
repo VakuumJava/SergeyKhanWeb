@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import axios from "axios"
-import { Button } from "@workspace/ui/components/button"
+import { Button } from "@workspace/ui/components/ui"
 import {
   ColumnDef,
   SortingState,
@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { Input } from "@workspace/ui/components/input"
+import { Input } from "@workspace/ui/components/ui"
 import {
   Table,
   TableBody,
@@ -21,13 +21,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@workspace/ui/components/table"
+} from "@workspace/ui/components/ui"
 import {
   Accordion,
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
-} from "@workspace/ui/components/accordion"
+} from "@workspace/ui/components/ui"
 import { ArrowDown, ArrowUp } from "lucide-react"
 import { Contact } from "@shared/constants/types"
 import { API } from "@shared/constants/constants"
