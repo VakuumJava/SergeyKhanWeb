@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import Order, CustomUser, Balance, BalanceLog, CalendarEvent, Contact, OrderLog, TransactionLog, MasterAvailability, MasterAvailability, CompanyBalance, CompanyBalanceLog, OrderCompletion, FinancialTransaction, OrderCompletion, FinancialTransaction
+from .models import Order, CustomUser, Balance, BalanceLog, CalendarEvent, Contact, OrderLog, TransactionLog, MasterAvailability, MasterAvailability, CompanyBalance, CompanyBalanceLog, OrderCompletion, FinancialTransaction, OrderCompletion, FinancialTransaction, SystemLog
 
 
 class OrderSerializer(serializers.ModelSerializer):

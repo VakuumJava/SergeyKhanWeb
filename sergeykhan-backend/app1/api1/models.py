@@ -231,47 +231,42 @@ class ProfitDistribution(models.Model):
 # Улучшенная модель для детального распределения прибыли
 class ProfitDistributionSettings(models.Model):
     """
-    Настройки для двухэтапного распределения прибыли:
-    1. Автоматический расчёт чистой прибыли и авансов
-    2. Распределение финансов куратором
+    Настройки для распределения прибыли при завершении заказа:
+    - Мастеру: master_paid_percent (сразу выплачено) + master_balance_percent (на баланс)
+    - Куратору: curator_percent (на баланс)
+    - Компании: company_percent (в кассу)
     """
     
-    # Этап 1: Автоматический расчёт чистой прибыли
-    # Чистая прибыль = сумма заказа - расходы мастера
-    advance_percent = models.PositiveIntegerField(
+    # Распределение средств при завершении заказа
+    master_paid_percent = models.PositiveIntegerField(
         default=30, 
-        help_text="Аванс мастеру (% от чистой прибыли)"
+        help_text="Процент мастеру сразу в выплачено"
     )
-    initial_kassa_percent = models.PositiveIntegerField(
-        default=70, 
-        help_text="Сумма для передачи в кассу (% от чистой прибыли)"
-    )
-    
-    # Этап 2: Распределение финансов куратором
-    # Куратор распределяет деньги, полученные от мастера
-    cash_percent = models.PositiveIntegerField(
+    master_balance_percent = models.PositiveIntegerField(
         default=30, 
-        help_text="Наличные мастеру сразу (% от общей суммы)"
-    )
-    balance_percent = models.PositiveIntegerField(
-        default=30, 
-        help_text="Зачисление на баланс мастеру (% от общей суммы)"
+        help_text="Процент мастеру на баланс"
     )
     curator_percent = models.PositiveIntegerField(
         default=5, 
-        help_text="Зарплата куратору (% от общей суммы)"
+        help_text="Процент куратору на баланс"
     )
-    final_kassa_percent = models.PositiveIntegerField(
+    company_percent = models.PositiveIntegerField(
         default=35, 
-        help_text="Касса компании (% от общей суммы)"
+        help_text="Процент в кассу компании"
     )
     
-    # Метаданные
+    # Устаревшие поля для обратной совместимости
+    advance_percent = models.PositiveIntegerField(default=30, help_text="Устарело")
+    initial_kassa_percent = models.PositiveIntegerField(default=70, help_text="Устарело")
+    cash_percent = models.PositiveIntegerField(default=30, help_text="Устарело")
+    balance_percent = models.PositiveIntegerField(default=30, help_text="Устарело")
+    final_kassa_percent = models.PositiveIntegerField(default=35, help_text="Устарело")
+      # Метаданные
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
         CustomUser, 
-        on_delete=models.SET_NULL, 
+        on_delete=models.SET_NULL,
         null=True, 
         blank=True,
         limit_choices_to={'role__in': ['super-admin', 'admin']}
@@ -290,36 +285,38 @@ class ProfitDistributionSettings(models.Model):
         settings, created = ProfitDistributionSettings.objects.get_or_create(
             id=1,
             defaults={
+                'master_paid_percent': 30,
+                'master_balance_percent': 30,
+                'curator_percent': 5,
+                'company_percent': 35,
+                # Устаревшие значения для совместимости
                 'advance_percent': 30,
                 'initial_kassa_percent': 70,
                 'cash_percent': 30,
                 'balance_percent': 30,
-                'curator_percent': 5,
                 'final_kassa_percent': 35
             }
         )
         return settings
     
     def clean(self):
-        """Валидация: проверяем, что сумма процентов в каждом этапе = 100%"""
+        """Валидация: проверяем, что сумма процентов = 100%"""
         from django.core.exceptions import ValidationError
         
-        # Этап 1: Аванс + Касса = 100%
-        stage1_total = self.advance_percent + self.initial_kassa_percent
-        if stage1_total != 100:
-            raise ValidationError(
-                f'Сумма процентов этапа 1 должна быть 100%, а не {stage1_total}%'
-            )
-        
-        # Этап 2: Наличные + Баланс + Куратор + Касса = 100%
-        stage2_total = (
-            self.cash_percent + self.balance_percent + 
-            self.curator_percent + self.final_kassa_percent
+        # Проверяем новую схему распределения
+        total = (
+            self.master_paid_percent + self.master_balance_percent + 
+            self.curator_percent + self.company_percent
         )
-        if stage2_total != 100:
+        if total != 100:
             raise ValidationError(
-                f'Сумма процентов этапа 2 должна быть 100%, а не {stage2_total}%'
+                f'Сумма всех процентов должна быть 100%, а не {total}%'
             )
+    
+    @property
+    def total_master_percent(self):
+        """Общий процент мастера"""
+        return self.master_paid_percent + self.master_balance_percent
     
     def save(self, *args, **kwargs):
         self.clean()
@@ -608,8 +605,7 @@ class OrderCompletion(models.Model):
     curator = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_completions', limit_choices_to={'role': 'curator'})
     review_date = models.DateTimeField(null=True, blank=True, verbose_name="Дата проверки")
     curator_notes = models.TextField(blank=True, null=True, verbose_name="Заметки куратора")
-    
-    # Распределение средств
+      # Распределение средств
     is_distributed = models.BooleanField(default=False, verbose_name="Средства распределены")
     
     def save(self, *args, **kwargs):        # Автоматический расчет общих расходов и чистой прибыли
@@ -682,3 +678,33 @@ class FinancialTransaction(models.Model):
     
     def __str__(self):
         return f"{self.user.email} - {self.get_transaction_type_display()} - {self.amount}₸"
+
+
+# Модель для логирования системных действий
+class SystemLog(models.Model):
+    ACTION_CHOICES = [
+        ('settings_updated', 'Настройки обновлены'),
+        ('percentage_settings_updated', 'Настройки процентов обновлены'),
+        ('company_balance_updated', 'Баланс компании обновлён'),
+        ('system_maintenance', 'Системное обслуживание'),
+        ('user_role_changed', 'Роль пользователя изменена'),
+        ('backup_created', 'Резервная копия создана'),
+        ('data_import', 'Импорт данных'),
+        ('data_export', 'Экспорт данных'),
+    ]
+    
+    action = models.CharField(max_length=30, choices=ACTION_CHOICES)
+    description = models.TextField()
+    performed_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
+    old_value = models.TextField(null=True, blank=True)
+    new_value = models.TextField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)  # Дополнительные данные
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Системный лог"
+        verbose_name_plural = "Системные логи"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.action} - {self.performed_by.email if self.performed_by else 'Система'} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
