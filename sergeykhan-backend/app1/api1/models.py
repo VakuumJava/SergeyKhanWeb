@@ -199,6 +199,26 @@ class Order(models.Model):
         if not self.address:
             self.address = self.get_full_address()
         super().save(*args, **kwargs)
+    
+    def get_profit_settings(self):
+        """
+        Получить настройки распределения прибыли для данного заказа.
+        Использует индивидуальные настройки мастера, если есть и активны,
+        иначе глобальные настройки.
+        """
+        if self.assigned_master:
+            return MasterProfitSettings.get_settings_for_master(self.assigned_master)
+        else:
+            # Если мастер не назначен, используем глобальные настройки
+            global_settings = ProfitDistributionSettings.get_settings()
+            return {
+                'master_paid_percent': global_settings.master_paid_percent,
+                'master_balance_percent': global_settings.master_balance_percent,
+                'curator_percent': global_settings.curator_percent,
+                'company_percent': global_settings.company_percent,
+                'is_individual': False,
+                'settings_id': None
+            }
 
 
 # Модель баланса пользователя

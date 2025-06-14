@@ -9,3 +9,4 @@ from .logging_views import *
 from .warranty_views import *
 from .completion_views import *
 from .calendar_views import *
+from .master_profit_views import *

@@ -7,7 +7,7 @@ import { Master  } from "@shared/constants/types";
 import { HistoryPayments } from "@shared/finances/chartFinances/historyPayments";
 import { OrdersDataTable } from "@shared/orders/(beta-orders)/OrdersTable";
 import {columns, Order} from "@shared/constants/orders";
-import { UniversalBalanceManager } from "@workspace/ui/components/shared";
+import { UniversalBalanceManager, MasterProfitSettings } from "@workspace/ui/components/shared";
 import { Button } from "@workspace/ui/components/ui";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/ui";
 import { MasterCalendar } from "@workspace/ui/components/ui";
@@ -190,6 +190,15 @@ const MasterProfile: React.FC<MasterProfileProps> = ({ id }) => {
                         apiBaseUrl={API}
                     />
                 </div>
+            </div>
+
+            {/* Настройки распределения прибыли */}
+            <div className="pt-5">
+                <MasterProfitSettings 
+                    masterId={id}
+                    masterName={master.first_name && master.last_name ? `${master.first_name} ${master.last_name}` : master.email}
+                    readonly={false}
+                />
             </div>
 
             {/* Таблица дистанции мастера */}

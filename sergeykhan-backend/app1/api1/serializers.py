@@ -475,51 +475,34 @@ class ProfitDistributionSettingsSerializer(serializers.ModelSerializer):
 
 
 class MasterProfitSettingsSerializer(serializers.ModelSerializer):
-    """Сериализатор для индивидуальных настроек распределения прибыли мастера"""
-    master_name = serializers.SerializerMethodField()
+    """Сериализатор для индивидуальных настроек прибыли мастера"""
+    master_name = serializers.CharField(source='master.get_full_name', read_only=True)
+    master_email = serializers.CharField(source='master.email', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    updated_by_name = serializers.CharField(source='updated_by.get_full_name', read_only=True)
     total_master_percent = serializers.IntegerField(read_only=True)
     
     class Meta:
         model = MasterProfitSettings
         fields = [
-            'id', 'master', 'master_name', 'master_paid_percent', 'master_balance_percent',
+            'id', 'master', 'master_name', 'master_email',
+            'master_paid_percent', 'master_balance_percent', 
             'curator_percent', 'company_percent', 'total_master_percent',
-            'is_active', 'created_at', 'updated_at', 'created_by', 'updated_by'
+            'is_active', 'created_at', 'updated_at',
+            'created_by', 'created_by_name', 'updated_by', 'updated_by_name'
         ]
-        read_only_fields = ('created_at', 'updated_at', 'created_by', 'updated_by', 'total_master_percent')
-    
-    def get_master_name(self, obj):
-        """Получить полное имя мастера"""
-        if obj.master.first_name and obj.master.last_name:
-            return f"{obj.master.first_name} {obj.master.last_name}"
-        return obj.master.email
+        read_only_fields = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by']
     
     def validate(self, data):
-        """Проверка, что общая сумма процентов равна 100%"""
-        total_percent = (
-            data.get('master_paid_percent', 0) +
-            data.get('master_balance_percent', 0) +
-            data.get('curator_percent', 0) +
+        """Проверяем что сумма процентов равна 100%"""
+        total = (
+            data.get('master_paid_percent', 0) + 
+            data.get('master_balance_percent', 0) + 
+            data.get('curator_percent', 0) + 
             data.get('company_percent', 0)
         )
-        
-        if total_percent != 100:
+        if total != 100:
             raise serializers.ValidationError(
-                f"Сумма всех процентов должна быть равна 100%. Текущая сумма: {total_percent}%"
+                f'Сумма всех процентов должна быть равна 100%. Текущая сумма: {total}%'
             )
         return data
-    
-    def create(self, validated_data):
-        """Создание с указанием создателя"""
-        request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            validated_data['created_by'] = request.user
-            validated_data['updated_by'] = request.user
-        return super().create(validated_data)
-    
-    def update(self, instance, validated_data):
-        """Обновление с указанием обновившего"""
-        request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            validated_data['updated_by'] = request.user
-        return super().update(instance, validated_data)

@@ -146,12 +146,10 @@ urlpatterns = [
     path('api/completions/<int:completion_id>/review/', review_completion, name='review_completion'),
     path('api/completions/<int:completion_id>/distribution/', get_completion_distribution, name='get_completion_distribution'),
     path('api/transactions/', get_financial_transactions, name='get_financial_transactions'),
-    path('api/transactions/all/', get_all_financial_transactions, name='get_all_financial_transactions'),
-
-    # Маршруты для индивидуальных настроек распределения прибыли мастеров
-    path('profit-settings/', get_all_profit_settings, name='get_all_profit_settings'),
-    path('profit-settings/master/<int:master_id>/', get_master_profit_settings, name='get_master_profit_settings'),
-    path('profit-settings/master/', get_master_profit_settings, name='get_current_master_profit_settings'),
-    path('profit-settings/master/<int:master_id>/manage/', manage_master_profit_settings, name='manage_master_profit_settings'),
-    path('profit-settings/master/<int:master_id>/delete/', delete_master_profit_settings, name='delete_master_profit_settings'),
+    path('api/transactions/all/', get_all_financial_transactions, name='get_all_financial_transactions'),    # Маршруты для индивидуальных настроек распределения прибыли мастеров
+    path('api/profit-settings/masters/', get_all_masters_with_settings, name='get_all_masters_with_settings'),
+    path('api/profit-settings/master/<int:master_id>/', get_master_profit_settings, name='get_master_profit_settings'),
+    path('api/profit-settings/master/<int:master_id>/set/', set_master_profit_settings, name='set_master_profit_settings'),
+    path('api/profit-settings/master/<int:master_id>/delete/', delete_master_profit_settings, name='delete_master_profit_settings'),
+    path('api/orders/<int:order_id>/profit-preview/', get_order_profit_preview, name='get_order_profit_preview'),
 ]

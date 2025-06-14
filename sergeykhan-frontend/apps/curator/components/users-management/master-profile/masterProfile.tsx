@@ -7,10 +7,10 @@ import { Master } from "@shared/constants/types";
 import { HistoryPayments } from "@shared/finances/chartFinances/historyPayments";
 import { OrdersDataTable } from "@shared/orders/(beta-orders)/OrdersTable";
 import { columns, Order as OrderType  } from "@shared/constants/orders";
-import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { MasterCalendar } from "@workspace/ui/components/master-calendar";
+import { Button } from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/ui";
+import { MasterCalendar } from "@workspace/ui/components/ui";
 import TokenSetter from "@/components/token-setter";
 import MasterDistanceTable from "./MasterDistanceTable";
 import {
@@ -21,8 +21,7 @@ import {
     DialogTitle,
     DialogFooter,
     DialogClose,
-} from "@workspace/ui/components/dialog";
-import {ChartBalanceProfile} from "@/components/users-management/charts/chartBalanceProfile";
+} from "@workspace/ui/components/ui";
 import { UniversalBalanceManager } from "@workspace/ui/components/shared";
 
 interface MasterProfileProps {

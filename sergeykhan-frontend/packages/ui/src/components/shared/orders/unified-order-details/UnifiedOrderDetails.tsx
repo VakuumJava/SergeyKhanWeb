@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from "@workspace/ui/components/ui";
 import OrderCompletionForm from "@shared/orders/completion/OrderCompletionForm";
+import { OrderProfitPreview } from "../../profit-settings";
 import { formatOrderForMaster, getAddressForMaster, maskPhoneForMaster } from "@shared/utils/masterDataUtils";
 
 export interface Order {
@@ -94,19 +95,6 @@ export interface Master {
   full_name: string;
 }
 
-export interface ProfitDistribution {
-  master_paid_percent: number;
-  master_balance_percent: number;
-  curator_percent: number;
-  company_percent: number;
-  master_immediate: number;
-  master_deferred: number;
-  master_total: number;
-  curator_share: number;
-  company_share: number;
-  net_profit: number;
-}
-
 interface UnifiedOrderDetailsProps {
   id: string;
   userRole: 'master' | 'curator' | 'admin' | 'super-admin';
@@ -125,8 +113,8 @@ const UnifiedOrderDetails: React.FC<UnifiedOrderDetailsProps> = ({ id, userRole,
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [profitDistribution, setProfitDistribution] = useState<ProfitDistribution | null>(null);
   const [showCompletionForm, setShowCompletionForm] = useState(false);
+  const [masterId, setMasterId] = useState<number | null>(null);
 
   // Dialog states
   const [isAssignOpen, setIsAssignOpen] = useState(false);
@@ -148,6 +136,25 @@ const UnifiedOrderDetails: React.FC<UnifiedOrderDetailsProps> = ({ id, userRole,
       }
 
       try {
+        // Если это мастер, получаем его ID
+        if (userRole === 'master') {
+          try {
+            const userResponse = await fetch(`${API}/api/user/`, {
+              headers: { 
+                "Content-Type": "application/json", 
+                Authorization: `Token ${token}` 
+              },
+            });
+            
+            if (userResponse.ok) {
+              const userData = await userResponse.json();
+              setMasterId(userData.id);
+            }
+          } catch (userError) {
+            console.warn("Не удалось получить ID пользователя:", userError);
+          }
+        }
+
         const orderResponse = await fetch(`${API}/api/orders/${id}/detail/`, {
           headers: { 
             "Content-Type": "application/json", 
@@ -167,25 +174,6 @@ const UnifiedOrderDetails: React.FC<UnifiedOrderDetailsProps> = ({ id, userRole,
           setOrder(formattedOrder as Order);
         } else {
           setOrder(orderData);
-        }
-
-        // Загружаем распределение прибыли для админов/кураторов
-        if (userRole === 'curator' || userRole === 'admin' || userRole === 'super-admin') {
-          try {
-            const profitResponse = await fetch(`${API}/api/orders/${id}/profit-distribution/`, {
-              headers: { 
-                "Content-Type": "application/json", 
-                Authorization: `Token ${token}` 
-              },
-            });
-
-            if (profitResponse.ok) {
-              const profitData = await profitResponse.json();
-              setProfitDistribution(profitData);
-            }
-          } catch (profitError) {
-            console.warn("Не удалось загрузить данные о прибыли:", profitError);
-          }
         }
       } catch (err: any) {
         setError(err.message);
@@ -803,48 +791,15 @@ const UnifiedOrderDetails: React.FC<UnifiedOrderDetailsProps> = ({ id, userRole,
             </CardContent>
           </Card>
 
-          {/* Profit Distribution for admins/curators */}
-          {profitDistribution && (userRole === 'curator' || userRole === 'admin' || userRole === 'super-admin') && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="w-5 h-5" />
-                  Распределение прибыли
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Мастер (сразу):</span>
-                      <span className="font-medium">{profitDistribution.master_immediate} ₸</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Мастер (баланс):</span>
-                      <span className="font-medium">{profitDistribution.master_deferred} ₸</span>
-                    </div>
-                    <div className="flex justify-between font-semibold">
-                      <span>Итого мастер:</span>
-                      <span>{profitDistribution.master_total} ₸</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Куратор:</span>
-                      <span className="font-medium">{profitDistribution.curator_share} ₸</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Компания:</span>
-                      <span className="font-medium">{profitDistribution.company_share} ₸</span>
-                    </div>
-                    <div className="flex justify-between font-semibold border-t pt-2">
-                      <span>Чистая прибыль:</span>
-                      <span>{profitDistribution.net_profit} ₸</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Profit Distribution */}
+          {(userRole === 'master' || userRole === 'curator' || userRole === 'admin' || userRole === 'super-admin') && (
+            <OrderProfitPreview 
+              orderId={id}
+              userRole={userRole}
+              finalCost={order.final_cost ? parseFloat(order.final_cost) : undefined}
+              masterId={masterId}
+              showTitle={true}
+            />
           )}
         </div>
       </div>
