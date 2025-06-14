@@ -1,6 +1,11 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import Order, CustomUser, Balance, BalanceLog, CalendarEvent, Contact, OrderLog, TransactionLog, MasterAvailability, MasterAvailability, CompanyBalance, CompanyBalanceLog, OrderCompletion, FinancialTransaction, OrderCompletion, FinancialTransaction, SystemLog
+from .models import (
+    Order, CustomUser, Balance, BalanceLog, CalendarEvent, Contact, OrderLog, 
+    TransactionLog, MasterAvailability, CompanyBalance, CompanyBalanceLog, 
+    OrderCompletion, FinancialTransaction, SystemLog, MasterProfitSettings,
+    ProfitDistributionSettings
+)
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -453,4 +458,68 @@ class OrderCompletionDistributionSerializer(serializers.Serializer):
     master_total = serializers.DecimalField(max_digits=10, decimal_places=2)
     company_share = serializers.DecimalField(max_digits=10, decimal_places=2)
     curator_share = serializers.DecimalField(max_digits=10, decimal_places=2)
-    net_profit = serializers.DecimalField(max_digits=10, decimal_places=2)
+    settings_used = serializers.CharField()
+    settings_details = serializers.DictField()
+
+
+class ProfitDistributionSettingsSerializer(serializers.ModelSerializer):
+    """Сериализатор для глобальных настроек распределения прибыли"""
+    class Meta:
+        model = ProfitDistributionSettings
+        fields = [
+            'id', 'master_paid_percent', 'master_balance_percent',
+            'curator_percent', 'company_percent', 'created_at',
+            'updated_at', 'created_by', 'updated_by'
+        ]
+        read_only_fields = ('created_at', 'updated_at', 'created_by', 'updated_by')
+
+
+class MasterProfitSettingsSerializer(serializers.ModelSerializer):
+    """Сериализатор для индивидуальных настроек распределения прибыли мастера"""
+    master_name = serializers.SerializerMethodField()
+    total_master_percent = serializers.IntegerField(read_only=True)
+    
+    class Meta:
+        model = MasterProfitSettings
+        fields = [
+            'id', 'master', 'master_name', 'master_paid_percent', 'master_balance_percent',
+            'curator_percent', 'company_percent', 'total_master_percent',
+            'is_active', 'created_at', 'updated_at', 'created_by', 'updated_by'
+        ]
+        read_only_fields = ('created_at', 'updated_at', 'created_by', 'updated_by', 'total_master_percent')
+    
+    def get_master_name(self, obj):
+        """Получить полное имя мастера"""
+        if obj.master.first_name and obj.master.last_name:
+            return f"{obj.master.first_name} {obj.master.last_name}"
+        return obj.master.email
+    
+    def validate(self, data):
+        """Проверка, что общая сумма процентов равна 100%"""
+        total_percent = (
+            data.get('master_paid_percent', 0) +
+            data.get('master_balance_percent', 0) +
+            data.get('curator_percent', 0) +
+            data.get('company_percent', 0)
+        )
+        
+        if total_percent != 100:
+            raise serializers.ValidationError(
+                f"Сумма всех процентов должна быть равна 100%. Текущая сумма: {total_percent}%"
+            )
+        return data
+    
+    def create(self, validated_data):
+        """Создание с указанием создателя"""
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            validated_data['created_by'] = request.user
+            validated_data['updated_by'] = request.user
+        return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        """Обновление с указанием обновившего"""
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            validated_data['updated_by'] = request.user
+        return super().update(instance, validated_data)

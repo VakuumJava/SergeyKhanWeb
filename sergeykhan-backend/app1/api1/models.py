@@ -137,11 +137,31 @@ class Order(models.Model):
     )    # Scheduling fields
     scheduled_date = models.DateField(null=True, blank=True, verbose_name='Дата выполнения')
     scheduled_time = models.TimeField(null=True, blank=True, verbose_name='Время выполнения')
-      # Дополнительные поля заказа
+    
+    # Дополнительные поля заказа
     service_type = models.CharField(max_length=100, null=True, blank=True, verbose_name='Тип услуги')
     equipment_type = models.CharField(max_length=100, null=True, blank=True, verbose_name='Тип оборудования')
+    age = models.PositiveIntegerField(null=True, blank=True, verbose_name='Возраст клиента')
     promotion = models.CharField(max_length=255, null=True, blank=True, verbose_name='Акции')
     due_date = models.DateField(null=True, blank=True, verbose_name='Срок исполнения')
+    
+    # Планирование и дополнительная информация
+    PRIORITY_CHOICES = (
+        ('низкий', 'Низкий'),
+        ('обычный', 'Обычный'),
+        ('высокий', 'Высокий'),
+        ('срочный', 'Срочный'),
+    )
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='обычный', verbose_name='Приоритет')
+    
+    PAYMENT_METHOD_CHOICES = (
+        ('наличные', 'Наличные'),
+        ('карта', 'Банковская карта'),
+        ('перевод', 'Банковский перевод'),
+        ('элсом', 'Элсом'),
+        ('mbанк', 'МБанк'),
+    )
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='наличные', verbose_name='Способ оплаты')
     notes = models.TextField(null=True, blank=True, verbose_name='Дополнительные заметки')
     
     # Financial fields
@@ -267,16 +287,27 @@ class ProfitDistributionSettings(models.Model):
     initial_kassa_percent = models.PositiveIntegerField(default=70, help_text="Устарело")
     cash_percent = models.PositiveIntegerField(default=30, help_text="Устарело")
     balance_percent = models.PositiveIntegerField(default=30, help_text="Устарело")
-    final_kassa_percent = models.PositiveIntegerField(default=35, help_text="Устарело")
-      # Метаданные
+    final_kassa_percent = models.PositiveIntegerField(default=35, help_text="Устарело")    # Метаданные
+    is_active = models.BooleanField(default=True, help_text="Активность настроек")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.SET_NULL,
+        null=True, 
+        blank=True,
+        related_name='created_profit_settings',
+        limit_choices_to={'role__in': ['super-admin', 'admin']},
+        help_text="Кто создал настройки"
+    )
     updated_by = models.ForeignKey(
         CustomUser, 
         on_delete=models.SET_NULL,
         null=True, 
         blank=True,
-        limit_choices_to={'role__in': ['super-admin', 'admin']}
+        related_name='updated_profit_settings',
+        limit_choices_to={'role__in': ['super-admin', 'admin']},
+        help_text="Кто последний раз обновил настройки"
     )
     
     class Meta:
@@ -616,29 +647,33 @@ class OrderCompletion(models.Model):
     is_distributed = models.BooleanField(default=False, verbose_name="Средства распределены")
     
     def save(self, *args, **kwargs):
-        # Автоматический расчет общих расходов и чистой прибыли
-        self.total_expenses = self.parts_expenses + self.transport_costs
+        # Автоматический расчет общих расходов и чистой прибыли        self.total_expenses = self.parts_expenses + self.transport_costs
         self.net_profit = self.total_received - self.total_expenses
         super().save(*args, **kwargs)
-    
+        
     def calculate_distribution(self):
-        """Рассчитывает распределение средств на основе настроек ProfitDistributionSettings"""
+        """Рассчитывает распределение средств на основе настроек - индивидуальных для мастера или глобальных"""
         if self.status != 'одобрен' or self.is_distributed:
             return None
             
-        # Получаем настройки распределения
-        settings = ProfitDistributionSettings.get_settings()
+        # Получаем настройки распределения для этого мастера
+        master = self.order.assigned_master or self.order.transferred_to
+        if not master:
+            return None
+            
+        # Получаем индивидуальные настройки мастера или глобальные
+        from .models import MasterProfitSettings  # Избегаем циклического импорта
+        settings = MasterProfitSettings.get_settings_for_master(master)
         
         # Используем новые поля для распределения
-        master_immediate = self.net_profit * (Decimal(settings.master_paid_percent) / 100)
-        master_deferred = self.net_profit * (Decimal(settings.master_balance_percent) / 100)
+        master_immediate = self.net_profit * (Decimal(settings['master_paid_percent']) / 100)
+        master_deferred = self.net_profit * (Decimal(settings['master_balance_percent']) / 100)
         master_total = master_immediate + master_deferred
         
         # Доля компании
-        company_share = self.net_profit * (Decimal(settings.company_percent) / 100)
-        
+        company_share = self.net_profit * (Decimal(settings['company_percent']) / 100)        
         # Доля куратору
-        curator_share = self.net_profit * (Decimal(settings.curator_percent) / 100)
+        curator_share = self.net_profit * (Decimal(settings['curator_percent']) / 100)
         
         return {
             'master_immediate': master_immediate,
@@ -646,11 +681,12 @@ class OrderCompletion(models.Model):
             'master_total': master_total,
             'company_share': company_share,
             'curator_share': curator_share,
-            'settings_used': {
-                'master_paid_percent': settings.master_paid_percent,
-                'master_balance_percent': settings.master_balance_percent,
-                'curator_percent': settings.curator_percent,
-                'company_percent': settings.company_percent
+            'settings_used': 'individual' if settings['is_individual'] else 'global',
+            'settings_details': {
+                'master_paid_percent': settings['master_paid_percent'],
+                'master_balance_percent': settings['master_balance_percent'],
+                'curator_percent': settings['curator_percent'],
+                'company_percent': settings['company_percent']
             }
         }
     
@@ -716,3 +752,131 @@ class SystemLog(models.Model):
     
     def __str__(self):
         return f"{self.action} - {self.performed_by.email if self.performed_by else 'Система'} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+
+# Индивидуальные настройки распределения прибыли для каждого мастера
+class MasterProfitSettings(models.Model):
+    """
+    Индивидуальные настройки распределения прибыли для конкретного мастера.
+    Если для мастера не настроены индивидуальные проценты, используются глобальные.
+    """
+    
+    master = models.OneToOneField(
+        CustomUser,
+        on_delete=models.CASCADE,
+        limit_choices_to={'role': 'master'},
+        related_name='profit_settings',
+        verbose_name='Мастер'
+    )
+    
+    # Распределение средств при завершении заказа
+    master_paid_percent = models.PositiveIntegerField(
+        default=30, 
+        help_text="Процент мастеру сразу в выплачено",
+        verbose_name="Процент на выплату (%)"
+    )
+    master_balance_percent = models.PositiveIntegerField(
+        default=30, 
+        help_text="Процент мастеру на баланс",
+        verbose_name="Процент на баланс (%)"
+    )
+    curator_percent = models.PositiveIntegerField(
+        default=5, 
+        help_text="Процент куратору на баланс",
+        verbose_name="Процент куратору (%)"
+    )
+    company_percent = models.PositiveIntegerField(
+        default=35, 
+        help_text="Процент в кассу компании",
+        verbose_name="Процент компании (%)"
+    )
+    
+    # Активность настроек
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Использовать индивидуальные настройки или глобальные",
+        verbose_name="Активно"
+    )
+    
+    # Метаданные
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+    created_by = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.SET_NULL,
+        null=True, 
+        blank=True,
+        limit_choices_to={'role__in': ['super-admin']},
+        related_name='created_master_profit_settings',
+        verbose_name="Создал"
+    )
+    updated_by = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.SET_NULL,
+        null=True, 
+        blank=True,
+        limit_choices_to={'role__in': ['super-admin']},
+        related_name='updated_master_profit_settings',
+        verbose_name="Обновил"
+    )
+    
+    class Meta:
+        verbose_name = 'Настройки распределения прибыли мастера'
+        verbose_name_plural = 'Настройки распределения прибыли мастеров'
+        ordering = ['master__first_name', 'master__last_name']
+    
+    def __str__(self):
+        status = "активные" if self.is_active else "неактивные"
+        return f'Настройки для {self.master.get_full_name() or self.master.email} ({status})'
+    
+    def clean(self):
+        """Валидация: сумма процентов должна быть 100%"""
+        total = (
+            self.master_paid_percent + 
+            self.master_balance_percent + 
+            self.curator_percent + 
+            self.company_percent
+        )
+        if total != 100:
+            raise ValidationError(
+                f'Сумма всех процентов должна быть равна 100%. '
+                f'Текущая сумма: {total}%'
+            )
+    
+    @property
+    def total_master_percent(self):
+        """Общий процент мастера (выплачено + баланс)"""
+        return self.master_paid_percent + self.master_balance_percent
+    
+    @staticmethod
+    def get_settings_for_master(master):
+        """
+        Получить настройки распределения для конкретного мастера.
+        Если у мастера нет индивидуальных настроек или они неактивны,
+        возвращает глобальные настройки.
+        """
+        try:
+            settings = MasterProfitSettings.objects.get(master=master, is_active=True)
+            return {
+                'master_paid_percent': settings.master_paid_percent,
+                'master_balance_percent': settings.master_balance_percent,
+                'curator_percent': settings.curator_percent,
+                'company_percent': settings.company_percent,
+                'is_individual': True,
+                'settings_id': settings.id
+            }
+        except MasterProfitSettings.DoesNotExist:
+            # Используем глобальные настройки
+            global_settings = ProfitDistributionSettings.get_settings()
+            return {
+                'master_paid_percent': global_settings.master_paid_percent,
+                'master_balance_percent': global_settings.master_balance_percent,
+                'curator_percent': global_settings.curator_percent,
+                'company_percent': global_settings.company_percent,
+                'is_individual': False,
+                'settings_id': None
+            }
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)

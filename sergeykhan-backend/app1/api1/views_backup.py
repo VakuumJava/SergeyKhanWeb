@@ -1026,14 +1026,15 @@ def distribute_profits(order: Order):
     curator = order.curator
     total = order.final_cost
 
-    # Используем новые настройки ProfitDistributionSettings
-    settings = ProfitDistributionSettings.get_settings()
+    # Используем индивидуальные настройки мастера или глобальные
+    from .models import MasterProfitSettings
+    settings = MasterProfitSettings.get_settings_for_master(master)
     
     # Получаем проценты из настроек
-    cash_percent = settings.master_paid_percent
-    balance_percent = settings.master_balance_percent
-    curator_percent = settings.curator_percent
-    kassa_percent = settings.company_percent
+    cash_percent = settings['master_paid_percent']
+    balance_percent = settings['master_balance_percent']
+    curator_percent = settings['curator_percent']
+    kassa_percent = settings['company_percent']
 
     cash_amount = (Decimal(cash_percent) / 100) * total
     balance_amount = (Decimal(balance_percent) / 100) * total
@@ -1078,6 +1079,14 @@ def distribute_profits(order: Order):
         "balance_to_master": round(balance_amount, 2),
         "curator_salary": round(curator_salary, 2),
         "retained_by_company": round(kassa_amount, 2),
+        "settings_used": "individual" if settings['is_individual'] else "global",
+        "master_total_percent": cash_percent + balance_percent,
+        "settings_breakdown": {
+            "master_paid_percent": cash_percent,
+            "master_balance_percent": balance_percent,
+            "curator_percent": curator_percent,
+            "company_percent": kassa_percent
+        }
     }
 
 

@@ -112,7 +112,7 @@ urlpatterns = [
     path('api/master-panel/', master_panel_access, name='master_panel_access'),    path('api/curator-panel/', curator_panel_access, name='curator_panel_access'),
     path('api/operator-panel/', operator_panel_access, name='operator_panel_access'),
     path('api/warrant-master-panel/', warrant_master_panel_access, name='warrant_master_panel_access'),
-    path('api/super-admin-panel/', super_admin_panel_access, name='super_admin_panel_access'),
+    path('api/super-admin-panel/', super_admin_panel, name='super_admin_panel_access'),
     path('api/orders/master/available/', get_master_available_orders, name='get_master_available_orders'),
       # Distance endpoints
     path('api/distance/settings/', get_distance_settings, name='get_distance_settings'),
@@ -147,4 +147,11 @@ urlpatterns = [
     path('api/completions/<int:completion_id>/distribution/', get_completion_distribution, name='get_completion_distribution'),
     path('api/transactions/', get_financial_transactions, name='get_financial_transactions'),
     path('api/transactions/all/', get_all_financial_transactions, name='get_all_financial_transactions'),
+
+    # Маршруты для индивидуальных настроек распределения прибыли мастеров
+    path('profit-settings/', get_all_profit_settings, name='get_all_profit_settings'),
+    path('profit-settings/master/<int:master_id>/', get_master_profit_settings, name='get_master_profit_settings'),
+    path('profit-settings/master/', get_master_profit_settings, name='get_current_master_profit_settings'),
+    path('profit-settings/master/<int:master_id>/manage/', manage_master_profit_settings, name='manage_master_profit_settings'),
+    path('profit-settings/master/<int:master_id>/delete/', delete_master_profit_settings, name='delete_master_profit_settings'),
 ]
