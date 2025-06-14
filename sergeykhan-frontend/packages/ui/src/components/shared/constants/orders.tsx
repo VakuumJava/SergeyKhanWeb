@@ -54,13 +54,9 @@ export interface Order {
     final_cost: string;
     expenses: string;
     
-    // Priority and payment
-    priority?: string;
-    payment_method?: string;
     notes?: string;
     
     // Additional fields from form
-    age?: number;
     equipment_type?: string;
     service_type?: string;
     promotion?: string;

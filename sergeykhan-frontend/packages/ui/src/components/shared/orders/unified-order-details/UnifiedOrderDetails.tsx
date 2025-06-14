@@ -82,8 +82,6 @@ export interface Order {
   // Планирование
   scheduled_date?: string;
   scheduled_time?: string;
-  priority?: string;
-  payment_method?: string;
   notes?: string;
 }
 
@@ -707,12 +705,6 @@ const UnifiedOrderDetails: React.FC<UnifiedOrderDetailsProps> = ({ id, userRole,
                           <p className="text-base">{order.equipment_type}</p>
                         </div>
                       )}
-                      {order.age && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Возраст клиента</p>
-                          <p className="text-base">{order.age} лет</p>
-                        </div>
-                      )}
                       {order.promotion && (
                         <div>
                           <p className="text-sm font-medium text-muted-foreground">Акции</p>
@@ -745,24 +737,6 @@ const UnifiedOrderDetails: React.FC<UnifiedOrderDetailsProps> = ({ id, userRole,
                         <div>
                           <p className="text-sm font-medium text-muted-foreground">Запланированное время</p>
                           <p className="text-base">{order.scheduled_time}</p>
-                        </div>
-                      )}
-                      {order.priority && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" />
-                            Приоритет
-                          </p>
-                          <p className="text-base capitalize">{order.priority}</p>
-                        </div>
-                      )}
-                      {order.payment_method && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                            <CreditCard className="w-3 h-3" />
-                            Способ оплаты
-                          </p>
-                          <p className="text-base">{order.payment_method}</p>
                         </div>
                       )}
                     </div>
@@ -820,15 +794,7 @@ const UnifiedOrderDetails: React.FC<UnifiedOrderDetailsProps> = ({ id, userRole,
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Итоговая стоимость:</span>
-                <div className="text-right">
-                  <span className="font-semibold">{order.final_cost} ₸</span>
-                  {order.payment_method && (
-                    <div className="text-xs text-muted-foreground mt-0.5 flex items-center justify-end gap-1">
-                      <CreditCard className="w-3 h-3" />
-                      {order.payment_method}
-                    </div>
-                  )}
-                </div>
+                <span className="font-semibold">{order.final_cost} ₸</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Расходы:</span>

@@ -11,9 +11,7 @@ import {
   MapPin,
   Phone,
   CheckCircle,
-  Clock,
-  AlertCircle,
-  CreditCard
+  Clock
 } from 'lucide-react';
 
 interface OrderCardSummaryProps {
@@ -32,8 +30,6 @@ interface OrderCardSummaryProps {
     address?: string;
     full_address?: string;
     public_address?: string;
-    priority?: string;
-    payment_method?: string;
     scheduled_date?: string;
     scheduled_time?: string;
   };
@@ -52,16 +48,6 @@ const OrderSummary: React.FC<OrderCardSummaryProps> = ({ order, compact = false 
     };
     return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
-  
-  const getPriorityColor = (priority: string) => {
-    const colors = {
-      'низкий': 'bg-green-100 text-green-800 border-green-200',
-      'обычный': 'bg-blue-100 text-blue-800 border-blue-200',
-      'высокий': 'bg-orange-100 text-orange-800 border-orange-200',
-      'срочный': 'bg-red-100 text-red-800 border-red-200',
-    };
-    return colors[priority as keyof typeof colors] || 'bg-gray-100 text-gray-800 border-gray-200';
-  };
 
   const getDisplayAddress = () => {
     if (order.full_address) return order.full_address;
@@ -76,11 +62,6 @@ const OrderSummary: React.FC<OrderCardSummaryProps> = ({ order, compact = false 
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold">Заказ #{order.id}</h3>
             <div className="flex gap-2 items-center">
-              {order.priority && order.priority !== 'обычный' && (
-                <Badge variant="outline" className={getPriorityColor(order.priority)}>
-                  {order.priority}
-                </Badge>
-              )}
               <Badge className={getStatusColor(order.status)}>
                 {order.status}
               </Badge>
@@ -112,7 +93,6 @@ const OrderSummary: React.FC<OrderCardSummaryProps> = ({ order, compact = false 
               <div className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-muted-foreground" />
                 <span className="font-medium">{order.final_cost} ₸</span>
-                {order.payment_method && <span className="text-xs text-muted-foreground">({order.payment_method})</span>}
               </div>
             )}
             
@@ -135,11 +115,6 @@ const OrderSummary: React.FC<OrderCardSummaryProps> = ({ order, compact = false 
             Заказ #{order.id}
           </CardTitle>
           <div className="flex gap-2 items-center">
-            {order.priority && order.priority !== 'обычный' && (
-              <Badge variant="outline" className={getPriorityColor(order.priority)}>
-                {order.priority}
-              </Badge>
-            )}
             <Badge className={getStatusColor(order.status)}>
               {order.status}
             </Badge>
@@ -207,12 +182,6 @@ const OrderSummary: React.FC<OrderCardSummaryProps> = ({ order, compact = false 
             <div className="text-center p-3 bg-primary/10 rounded-lg">
               <p className="text-sm text-muted-foreground">Стоимость</p>
               <p className="text-lg font-semibold text-primary">{order.final_cost} ₸</p>
-              {order.payment_method && (
-                <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
-                  <CreditCard className="w-3 h-3" />
-                  {order.payment_method}
-                </p>
-              )}
             </div>
           )}
         </div>
@@ -242,26 +211,6 @@ const OrderSummary: React.FC<OrderCardSummaryProps> = ({ order, compact = false 
             </div>
           )}
 
-          {order.priority && (
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-4 h-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">Приоритет</p>
-                <p className="font-medium">{order.priority}</p>
-              </div>
-            </div>
-          )}
-          
-          {order.payment_method && (
-            <div className="flex items-center gap-3">
-              <CreditCard className="w-4 h-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">Способ оплаты</p>
-                <p className="font-medium">{order.payment_method}</p>
-              </div>
-            </div>
-          )}
-          
           {order.assigned_master && (
             <div className="flex items-center gap-3">
               <CheckCircle className="w-4 h-4 text-green-600" />

@@ -32,6 +32,10 @@ from .master_workload_views import (
     all_masters_workload,
     validate_order_scheduling
 )
+from .capacity_analysis import (
+    get_capacity_analysis,
+    get_weekly_capacity_forecast
+)
 
 urlpatterns = [
     path('create-test-order/', create_test_order, name='create_test_order'),
@@ -129,9 +133,12 @@ urlpatterns = [
     # Master Workload and Availability endpoints
     path('api/masters/<int:master_id>/availability/', master_availability_list, name='master_availability_list'),
     path('api/masters/<int:master_id>/availability/<int:availability_id>/', master_availability_detail, name='master_availability_detail'),
-    path('api/masters/<int:master_id>/workload/', master_workload_detail, name='master_workload_detail'),
-    path('api/masters/workload/all/', all_masters_workload, name='all_masters_workload'),
-    path('api/orders/validate-scheduling/', validate_order_scheduling, name='validate_order_scheduling'),    # Order Completion endpoints
+    path('api/masters/<int:master_id>/workload/', master_workload_detail, name='master_workload_detail'),    path('api/masters/workload/all/', all_masters_workload, name='all_masters_workload'),
+    path('api/orders/validate-scheduling/', validate_order_scheduling, name='validate_order_scheduling'),
+    
+    # Capacity Analysis endpoints
+    path('api/capacity/analysis/', get_capacity_analysis, name='get_capacity_analysis'),
+    path('api/capacity/weekly-forecast/', get_weekly_capacity_forecast, name='get_weekly_capacity_forecast'),# Order Completion endpoints
     path('api/orders/<int:order_id>/complete/', complete_order, name='complete_order'),
     path('api/completions/master/', get_master_completions, name='get_master_completions'),
     path('api/completions/pending/', get_pending_completions, name='get_pending_completions'),

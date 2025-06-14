@@ -40,13 +40,10 @@ interface Order {
   // Дополнительные поля
   service_type?: string;
   equipment_type?: string;
-  age?: number;
   promotion?: string;
   due_date?: string;
   scheduled_date?: string;
   scheduled_time?: string;
-  priority?: string;
-  payment_method?: string;
   notes?: string;
 }
 
@@ -80,26 +77,6 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
     );
   };
 
-  const getPriorityBadge = (priority?: string) => {
-    if (!priority) return null;
-    
-    const priorityConfig = {
-      'низкий': { variant: 'secondary', color: 'text-green-600' },
-      'обычный': { variant: 'outline', color: 'text-blue-600' },
-      'высокий': { variant: 'default', color: 'text-orange-600' },
-      'срочный': { variant: 'destructive', color: 'text-red-600' },
-    } as const;
-
-    const config = priorityConfig[priority as keyof typeof priorityConfig] || { variant: 'outline', color: 'text-gray-600' };
-    
-    return (
-      <Badge variant={config.variant as any} className={config.color}>
-        <AlertCircle className="w-3 h-3 mr-1" />
-        {priority.charAt(0).toUpperCase() + priority.slice(1)}
-      </Badge>
-    );
-  };
-
   const getDisplayAddress = () => {
     if (order.full_address) return order.full_address;
     if (order.public_address) return order.public_address;
@@ -113,7 +90,6 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-bold">Заказ #{order.id}</h2>
           {getStatusBadge(order.status)}
-          {getPriorityBadge(order.priority)}
         </div>
         <div className="text-sm text-muted-foreground">
           {new Date(order.created_at).toLocaleDateString()}
@@ -208,16 +184,6 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
                 </div>
               )}
               
-              {order.age && (
-                <div className="flex items-center gap-3">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Возраст клиента</p>
-                    <p className="font-medium">{order.age} лет</p>
-                  </div>
-                </div>
-              )}
-              
               {order.promotion && (
                 <div className="flex items-center gap-3">
                   <Building className="w-4 h-4 text-muted-foreground" />
@@ -268,7 +234,7 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
 
       {/* Scheduling and Additional Info - показываем только админам/кураторам или если showFullInfo */}
       {(showFullInfo || userRole === 'curator' || userRole === 'admin' || userRole === 'super-admin') && (
-        order.due_date || order.scheduled_date || order.scheduled_time || order.payment_method
+        order.due_date || order.scheduled_date || order.scheduled_time
       ) && (
         <Card>
           <CardHeader>
@@ -305,16 +271,6 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
                   <div>
                     <p className="text-sm text-muted-foreground">Запланированное время</p>
                     <p className="font-medium">{order.scheduled_time}</p>
-                  </div>
-                </div>
-              )}
-              
-              {order.payment_method && (
-                <div className="flex items-center gap-3">
-                  <CreditCard className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Способ оплаты</p>
-                    <p className="font-medium">{order.payment_method}</p>
                   </div>
                 </div>
               )}

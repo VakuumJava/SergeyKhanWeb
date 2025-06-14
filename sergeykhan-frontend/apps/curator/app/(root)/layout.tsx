@@ -1,7 +1,7 @@
 import React from 'react'
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@workspace/ui/components/sidebar"
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@workspace/ui/components/ui/sidebar"
 import AppSidebar from '@/components/sidebar/sidebar'
-import { Separator } from '@workspace/ui/components/separator'
+import { Separator } from '@workspace/ui/components/ui/separator'
 import HeaderBreadcrumb from '@/components/header/header-breadcrumb'
 import ThemeSwitcher from '@/components/theme-switcher'
 import Link from 'next/link';

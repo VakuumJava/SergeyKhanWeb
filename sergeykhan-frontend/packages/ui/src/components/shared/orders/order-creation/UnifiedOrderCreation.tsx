@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@workspace/ui/components/ui";
 import { Input } from "@workspace/ui/components/ui";
 import { Label } from "@workspace/ui/components/ui";
@@ -9,7 +9,7 @@ import { Textarea } from "@workspace/ui/components/ui";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/ui";
 import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui/components/ui";
 import { Calendar } from "@workspace/ui/components/ui";
-import { UserPlus, CalendarIcon, Clock, AlertCircle, CreditCard, FileText } from 'lucide-react';
+import { UserPlus, CalendarIcon, Clock, FileText, Users, RefreshCw, AlertCircle } from 'lucide-react';
 import { format } from "date-fns";
 import axios from 'axios';
 import { API } from '@shared/constants/constants';
@@ -23,7 +23,6 @@ interface OrderFormData {
   entrance: string;
   service_type: string;
   description: string;
-  age: number;
   equipment_type: string;
   price: number;
   promotion: string;
@@ -34,10 +33,218 @@ interface OrderFormData {
   // Дополнительные поля для расширенной информации о заказе
   scheduled_date: string;
   scheduled_time: string;
-  priority: string;
-  payment_method: string;
   notes: string;
 }
+
+interface MasterWorkloadData {
+  master_id: number;
+  master_email: string;
+  next_available_slot: {
+    date: string;
+    start_time: string;
+    end_time: string;
+  } | null;
+  total_orders_today: number;
+}
+
+// Компонент для анализа пропускной способности и планирования
+const CapacityAnalysis: React.FC = () => {
+  const [capacityData, setCapacityData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCapacityData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Токен авторизации не найден');
+      }
+
+      const response = await fetch('http://127.0.0.1:8000/api/capacity/analysis/', {
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ошибка HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setCapacityData(data);
+    } catch (err) {
+      console.error('Ошибка загрузки данных планирования:', err);
+      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCapacityData();
+  }, []);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Планирование заказов
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Планирование заказов
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-4 w-4" />
+              <span className="text-sm">{error}</span>
+            </div>
+          </div>
+          <Button onClick={fetchCapacityData} className="w-full" variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Попробовать снова
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const today = capacityData?.today;
+  const tomorrow = capacityData?.tomorrow;
+  const pending = capacityData?.pending_orders;
+  const recommendations = capacityData?.recommendations || [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="h-5 w-5" />
+          Планирование заказов
+          <Button 
+            onClick={fetchCapacityData}
+            size="sm"
+            variant="ghost"
+            className="ml-auto"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Ожидающие заказы */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <span className="font-medium text-blue-900 dark:text-blue-100">Ожидающие заказы</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <div>Новые: {pending?.new_orders || 0}</div>
+            <div>В обработке: {pending?.processing_orders || 0}</div>
+          </div>
+          <div className="font-bold text-blue-900 dark:text-blue-100 mt-1">
+            Всего: {pending?.total_pending || 0} заказов
+          </div>
+        </div>
+
+        {/* Пропускная способность на сегодня и завтра */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+            <div className="font-medium text-green-900 dark:text-green-100 mb-1">Сегодня</div>
+            <div className="text-2xl font-bold text-green-700 dark:text-green-400">
+              {today?.capacity?.available_slots || 0}
+            </div>
+            <div className="text-xs text-green-600 dark:text-green-400">свободных слотов</div>
+            <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+              Работает: {today?.masters_stats?.masters_with_availability || 0} мастеров
+            </div>
+          </div>
+          
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <div className="font-medium text-blue-900 dark:text-blue-100 mb-1">Завтра</div>
+            <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
+              {tomorrow?.capacity?.available_slots || 0}
+            </div>
+            <div className="text-xs text-blue-600 dark:text-blue-400">свободных слотов</div>
+            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+              Работает: {tomorrow?.masters_stats?.masters_with_availability || 0} мастеров
+            </div>
+          </div>
+        </div>
+
+        {/* Рекомендации */}
+        <div className="space-y-2">
+          <div className="font-medium text-gray-900 dark:text-gray-100 mb-2">Рекомендации:</div>
+          {recommendations.map((rec: any, index: number) => (
+            <div 
+              key={index}
+              className={`p-3 rounded-lg border text-sm ${
+                rec.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200' :
+                rec.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200' :
+                rec.type === 'error' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200' :
+                'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200'
+              }`}
+            >
+              <div className="font-medium mb-1">{rec.title}</div>
+              <div className="text-xs opacity-90">{rec.message}</div>
+              <div className="text-xs font-medium mt-2 opacity-95">
+                💡 {rec.action}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Детали по мастерам */}
+        <div className="border-t dark:border-gray-700 pt-4">
+          <div className="font-medium text-gray-900 dark:text-gray-100 mb-3">Статус мастеров на сегодня:</div>
+          <div className="space-y-2">
+            {today?.masters_details?.map((master: any) => (
+              <div key={master.id} className="flex items-center justify-between text-sm">
+                <div className="flex-1">
+                  <div className="font-medium truncate text-gray-900 dark:text-gray-100">{master.name || master.email}</div>
+                  <div className="text-gray-500 dark:text-gray-400 text-xs">
+                    Слотов: {master.availability_slots} | Заказов: {master.assigned_orders}
+                  </div>
+                </div>
+                <div className="ml-2">
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    master.status === 'available' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                    master.status === 'busy' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                    'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                  }`}>
+                    {master.status === 'available' ? 'Доступен' :
+                     master.status === 'busy' ? 'Занят' : 'Нет расписания'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const UnifiedOrderCreation: React.FC = () => {
   const [formData, setFormData] = useState<OrderFormData>({
@@ -49,7 +256,6 @@ const UnifiedOrderCreation: React.FC = () => {
     entrance: '',
     service_type: '',
     description: '',
-    age: 0,
     equipment_type: '',
     price: 0,
     promotion: '',
@@ -60,8 +266,6 @@ const UnifiedOrderCreation: React.FC = () => {
     // Дополнительные поля
     scheduled_date: '',
     scheduled_time: '',
-    priority: 'обычный',
-    payment_method: 'наличные',
     notes: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -87,7 +291,6 @@ const UnifiedOrderCreation: React.FC = () => {
         house_number: formData.house_number,
         apartment: formData.apartment,
         entrance: formData.entrance,
-        age: formData.age,
         equipment_type: formData.equipment_type,
         service_type: formData.service_type,
         price: Number(formData.price).toFixed(2),
@@ -104,8 +307,6 @@ const UnifiedOrderCreation: React.FC = () => {
         // Дополнительные поля
         scheduled_date: formData.scheduled_date || null,
         scheduled_time: formData.scheduled_time || null,
-        priority: formData.priority,
-        payment_method: formData.payment_method,
         notes: formData.notes,
       };
       
@@ -133,7 +334,6 @@ const UnifiedOrderCreation: React.FC = () => {
         entrance: '',
         service_type: '',
         description: '',
-        age: 0,
         equipment_type: '',
         price: 0,
         promotion: '',
@@ -143,8 +343,6 @@ const UnifiedOrderCreation: React.FC = () => {
         expenses: 0,
         scheduled_date: '',
         scheduled_time: '',
-        priority: 'обычный',
-        payment_method: 'наличные',
         notes: '',
       });
       setSelectedDate(undefined);
@@ -179,7 +377,7 @@ const UnifiedOrderCreation: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="w-full">
       <div className="container mx-auto px-4 py-8">
         {/* Заголовок */}
         <div className="mb-8">
@@ -189,15 +387,19 @@ const UnifiedOrderCreation: React.FC = () => {
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
-              Создание заказа
-            </CardTitle>
-          </CardHeader>
-          
-          <CardContent className="space-y-6">
+        {/* Основная сетка: форма и информация о мастерах */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Форма создания заказа */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5" />
+                  Создание заказа
+                </CardTitle>
+              </CardHeader>
+              
+              <CardContent className="space-y-6">
             {/* Основная информация о заказе */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -280,19 +482,6 @@ const UnifiedOrderCreation: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="age">Возраст *</Label>
-                <Input
-                  id="age"
-                  type="number"
-                  placeholder="Введите возраст"
-                  value={formData.age}
-                  onChange={(e) => handleFieldChange('age', parseInt(e.target.value) || 0)}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
                 <Label htmlFor="equipment_type">Тип оборудования *</Label>
                 <Input
                   id="equipment_type"
@@ -301,17 +490,17 @@ const UnifiedOrderCreation: React.FC = () => {
                   onChange={(e) => handleFieldChange('equipment_type', e.target.value)}
                 />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="price">Цена *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  placeholder="Введите цену"
-                  value={formData.price}
-                  onChange={(e) => handleFieldChange('price', parseFloat(e.target.value) || 0)}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="price">Цена *</Label>
+              <Input
+                id="price"
+                type="number"
+                placeholder="Введите цену"
+                value={formData.price}
+                onChange={(e) => handleFieldChange('price', parseFloat(e.target.value) || 0)}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -429,51 +618,6 @@ const UnifiedOrderCreation: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="priority">
-                    <AlertCircle className="h-4 w-4 inline mr-2" />
-                    Приоритет заказа
-                  </Label>
-                  <Select
-                    value={formData.priority}
-                    onValueChange={(value) => handleFieldChange('priority', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Выберите приоритет" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="низкий">Низкий</SelectItem>
-                      <SelectItem value="обычный">Обычный</SelectItem>
-                      <SelectItem value="высокий">Высокий</SelectItem>
-                      <SelectItem value="срочный">Срочный</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="payment_method">
-                    <CreditCard className="h-4 w-4 inline mr-2" />
-                    Способ оплаты
-                  </Label>
-                  <Select
-                    value={formData.payment_method}
-                    onValueChange={(value) => handleFieldChange('payment_method', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Выберите способ оплаты" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="наличные">Наличные</SelectItem>
-                      <SelectItem value="карта">Банковская карта</SelectItem>
-                      <SelectItem value="перевод">Банковский перевод</SelectItem>
-                      <SelectItem value="элсом">Элсом</SelectItem>
-                      <SelectItem value="mbанк">МБанк</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="notes">
                   <FileText className="h-4 w-4 inline mr-2" />
@@ -532,7 +676,6 @@ const UnifiedOrderCreation: React.FC = () => {
                     entrance: '',
                     service_type: '',
                     description: '',
-                    age: 0,
                     equipment_type: '',
                     price: 0,
                     promotion: '',
@@ -542,8 +685,6 @@ const UnifiedOrderCreation: React.FC = () => {
                     expenses: 0,
                     scheduled_date: '',
                     scheduled_time: '',
-                    priority: 'обычный',
-                    payment_method: 'наличные',
                     notes: '',
                   });
                   setSelectedDate(undefined);
@@ -555,7 +696,14 @@ const UnifiedOrderCreation: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Информация о нагрузке мастеров */}
+      <div className="lg:col-span-1">
+        <CapacityAnalysis />
+      </div>
     </div>
+  </div>
+</div>
   );
 };
 

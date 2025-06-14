@@ -33,7 +33,6 @@ const FormSchema = z.object({
     name: z.string().min(2, { message: "Имя должно содержать не менее 2 символов." }),
     description: z.string().min(1, { message: "Описание обязательно для заполнения." }), // Добавлено поле description
     address: z.string().min(5, { message: "Адрес должен содержать не менее 5 символов." }),
-    age: z.coerce.number({ invalid_type_error: "Введите число" }).min(0, { message: "Возраст должен быть положительным числом." }),
     equipmentType: z.string().min(1, { message: "Тип оборудования обязателен." }),
     price: z.coerce.number({ invalid_type_error: "Введите число" }).min(0, { message: "Цена должна быть положительной." }),
     promotions: z.string().min(1, { message: "Поле «Акции» обязательно для заполнения." }),
@@ -65,7 +64,6 @@ export function OrderFormComponent() {
             client_name: data.name,
             client_phone: data.number,
             address: data.address,
-            age: data.age,
             equipment_type: data.equipmentType,
             price: Number(data.price).toFixed(2),
             promotion: data.promotions,
@@ -186,20 +184,6 @@ export function OrderFormComponent() {
                                 <Input placeholder="Введите адрес" {...field} />
                             </FormControl>
                             <FormDescription>Введите адрес доставки или объект.</FormDescription>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="age"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Возраст</FormLabel>
-                            <FormControl>
-                                <Input type="number" placeholder="Введите возраст" {...field} />
-                            </FormControl>
-                            <FormDescription>Введите ваш возраст.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}

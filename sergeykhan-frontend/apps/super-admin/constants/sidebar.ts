@@ -4,7 +4,7 @@ import {
     UserPlus,
     ChartColumn,
     Headset, Anvil,
-    UserSearch, Percent, Podcast, FileClock, Wallet, User, CalendarPlus, Users, CheckCircle, Settings
+    UserSearch, Percent, Podcast, FileClock, Wallet, User, CalendarPlus, CheckCircle, Settings
 } from 'lucide-react';
 
 export const sidebar_items = [
@@ -21,7 +21,6 @@ export const sidebar_items = [
     {
         name: "Инструменты",
         list: [
-
           {
                 title: "Заказы",
                 url: "/orders",
@@ -38,14 +37,10 @@ export const sidebar_items = [
                 title: "Управление процентами",
                 url: "/percentages-management",
                 icon: Percent,
-            },            {
+            }, {
                 title: "Управление дистанционкой",
                 url: "/distance-management",
                 icon: Podcast,
-            },{
-                title: "Нагрузка мастеров",
-                url: "/master-workload",
-                icon: Users,
             },{
                 title: "Завершения заказов",
                 url: "/completions",
@@ -97,26 +92,4 @@ export const sidebar_items = [
         },
       ],
     }
-    // {
-    //     name: "Информация",
-    //     list: [
-    //         {
-    //             title: "График работы",
-    //             url: "/schedule",
-    //             icon: CalendarCheck
-    //         }, {
-    //             title: "Профиль",
-    //             url: "/profile",
-    //             icon: UserRound
-    //         }, {
-    //             title: "Рейтинг",
-    //             url: "/leaderboard",
-    //             icon: ChartNoAxesCombined
-    //         }, {
-    //             title: "Настройки",
-    //             url: "/settings",
-    //             icon: Settings
-    //         }
-    //     ]
-    // }
 ]
