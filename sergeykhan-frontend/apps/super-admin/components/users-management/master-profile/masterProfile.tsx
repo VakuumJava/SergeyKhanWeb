@@ -3,15 +3,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "@shared/constants/constants";
-import { Master,  } from "@shared/constants/types";
-import { ChartBalanceProfile } from "@/components/users-management/charts/chartBalanceProfile";
+import { Master  } from "@shared/constants/types";
 import { HistoryPayments } from "@shared/finances/chartFinances/historyPayments";
 import { OrdersDataTable } from "@shared/orders/(beta-orders)/OrdersTable";
 import {columns, Order} from "@shared/constants/orders";
 import { UniversalBalanceManager } from "@workspace/ui/components/shared";
-import { Button } from "@workspace/ui/components/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { MasterCalendar } from "@workspace/ui/components/master-calendar";
+import { Button } from "@workspace/ui/components/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/ui";
+import { MasterCalendar } from "@workspace/ui/components/ui";
 import {
     Dialog,
     DialogTrigger,
@@ -20,7 +19,7 @@ import {
     DialogTitle,
     DialogFooter,
     DialogClose,
-} from "@workspace/ui/components/dialog";
+} from "@workspace/ui/components/ui";
 import MasterDistanceTable from "./MasterDistanceTable";
 
 interface MasterProfileProps {
