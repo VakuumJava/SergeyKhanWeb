@@ -1,4 +1,4 @@
-#!/Users/bekzhan/Documents/projects/soso/sergeykhan-backend/venv/bin/python3.12
+#!/Users/bekzhan/Documents/projects/sk/SergeyKhanWeb/sergeykhan-backend/venv/bin/python3.12
 # -*- coding: utf-8 -*-
 import re
 import sys

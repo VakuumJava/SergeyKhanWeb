@@ -15,15 +15,31 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='MasterProfitSettings',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('master_paid_percent', models.PositiveIntegerField(help_text='Процент мастеру сразу в выплачено')),
-                ('master_balance_percent', models.PositiveIntegerField(help_text='Процент мастеру на баланс')),
-                ('curator_percent', models.PositiveIntegerField(help_text='Процент куратору на баланс')),
-                ('company_percent', models.PositiveIntegerField(help_text='Процент в кассу компании')),
+                ('id', models.BigAutoField(auto_created=True,
+                 primary_key=True, serialize=False, verbose_name='ID')),
+                ('master_paid_percent', models.PositiveIntegerField(
+                    help_text='Процент мастеру сразу в выплачено')),
+                ('master_balance_percent', models.PositiveIntegerField(
+                    help_text='Процент мастеру на баланс')),
+                ('curator_percent', models.PositiveIntegerField(
+                    help_text='Процент куратору на баланс')),
+                ('company_percent', models.PositiveIntegerField(
+                    help_text='Процент в кассу компании')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('master', models.OneToOneField(limit_choices_to={'role': 'master'}, on_delete=django.db.models.deletion.CASCADE, related_name='profit_settings', to=settings.AUTH_USER_MODEL)),
-                ('updated_by', models.ForeignKey(blank=True, limit_choices_to={'role__in': ['super-admin', 'admin']}, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='updated_master_profit_settings', to=settings.AUTH_USER_MODEL)),
+                ('master',
+                 models.OneToOneField(limit_choices_to={'role': 'master'},
+                                      on_delete=django.db.models.deletion.CASCADE,
+                                      related_name='profit_settings',
+                                      to=settings.AUTH_USER_MODEL)),
+                ('updated_by',
+                 models.ForeignKey(blank=True,
+                                   limit_choices_to={'role__in': ['super-admin',
+                                                                  'admin']},
+                                   null=True,
+                                   on_delete=django.db.models.deletion.SET_NULL,
+                                   related_name='updated_master_profit_settings',
+                                   to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'verbose_name': 'Настройки распределения прибыли мастера',
