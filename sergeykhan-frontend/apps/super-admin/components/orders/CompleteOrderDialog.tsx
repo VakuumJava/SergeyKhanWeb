@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
+import { Button } from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
 import { Textarea } from "@workspace/ui/components/textarea";
 import {
   Dialog,
@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
-} from "@workspace/ui/components/dialog";
+} from "@workspace/ui/components/ui";
 import { Label } from "@workspace/ui/components/label";
 import { Order } from "@shared/constants/orders";
 import { API } from "@shared/constants/constants";

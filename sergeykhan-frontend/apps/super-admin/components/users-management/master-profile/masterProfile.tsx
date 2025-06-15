@@ -7,10 +7,10 @@ import { Master  } from "@shared/constants/types";
 import { HistoryPayments } from "@shared/finances/chartFinances/historyPayments";
 import { OrdersDataTable } from "@shared/orders/(beta-orders)/OrdersTable";
 import {columns, Order} from "@shared/constants/orders";
-import { UniversalBalanceManager, MasterProfitSettings } from "@workspace/ui/components/shared";
+import { UniversalBalanceManager, MasterProfitSettings, WorkScheduleTable } from "@workspace/ui/components/shared";
 import { Button } from "@workspace/ui/components/ui";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/ui";
-import { MasterCalendar } from "@workspace/ui/components/ui";
+// import { MasterCalendar } from "@workspace/ui/components/ui";
 import {
     Dialog,
     DialogTrigger,
@@ -153,7 +153,7 @@ const MasterProfile: React.FC<MasterProfileProps> = ({ id }) => {
                         <div className="text-2xl font-bold">
                             {orders
                                 .filter(order => order.status === 'completed')
-                                .reduce((sum, order) => sum + (order.payment_amount || 0), 0)
+                                .reduce((sum, order) => sum + (parseFloat(order.final_cost) || 0), 0)
                             } ₽
                         </div>
                     </CardContent>
@@ -178,7 +178,8 @@ const MasterProfile: React.FC<MasterProfileProps> = ({ id }) => {
                 </div>
             </div>
 
-            {/* Календарь мастера */}
+            {/* Календарь мастера - ЗАКОММЕНТИРОВАН ДЛЯ СУПЕР-АДМИНА */}
+            {/*
             <div className="pt-5">
                 <div className="rounded-xl border p-6">
                     <h3 className="text-lg font-semibold mb-4">📅 График загруженности мастера</h3>
@@ -191,6 +192,7 @@ const MasterProfile: React.FC<MasterProfileProps> = ({ id }) => {
                     />
                 </div>
             </div>
+            */}
 
             {/* Настройки распределения прибыли */}
             <div className="pt-5">
@@ -199,6 +201,28 @@ const MasterProfile: React.FC<MasterProfileProps> = ({ id }) => {
                     masterName={master.first_name && master.last_name ? `${master.first_name} ${master.last_name}` : master.email}
                     readonly={false}
                 />
+            </div>
+
+            {/* Расписание и слоты мастера */}
+            <div className="pt-5">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <span>📅</span>
+                            Расписание и слоты мастера
+                        </CardTitle>
+                        <CardDescription>
+                            Управление расписанием работы мастера, просмотр занятых и свободных слотов.
+                            Нажмите на занятый слот для просмотра деталей заказа.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <WorkScheduleTable 
+                            userRole="super-admin"
+                            masterId={parseInt(id)}
+                        />
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Таблица дистанции мастера */}

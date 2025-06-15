@@ -1,11 +1,10 @@
 import React from 'react';
-;
-import UsersTab from "@/components/users-management/UsersTab";
+import UsersManagement from "@/components/users-management/UsersManagement";
 
 const ManagementPage = () => {
     return (
         <div>
-            <UsersTab></UsersTab>
+            <UsersManagement />
         </div>
     );
 };

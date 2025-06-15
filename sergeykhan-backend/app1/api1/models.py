@@ -136,24 +136,14 @@ class Order(models.Model):
         blank=True,
     )    # Scheduling fields
     scheduled_date = models.DateField(null=True, blank=True, verbose_name='Дата выполнения')
-    scheduled_time = models.TimeField(null=True, blank=True, verbose_name='Время выполнения')
-    
+    scheduled_time = models.TimeField(null=True, blank=True, verbose_name='Время выполнения')    
     # Дополнительные поля заказа
     service_type = models.CharField(max_length=100, null=True, blank=True, verbose_name='Тип услуги')
     equipment_type = models.CharField(max_length=100, null=True, blank=True, verbose_name='Тип оборудования')
-    age = models.PositiveIntegerField(null=True, blank=True, verbose_name='Возраст клиента')
     promotion = models.CharField(max_length=255, null=True, blank=True, verbose_name='Акции')
     due_date = models.DateField(null=True, blank=True, verbose_name='Срок исполнения')
     
     # Планирование и дополнительная информация
-    PRIORITY_CHOICES = (
-        ('низкий', 'Низкий'),
-        ('обычный', 'Обычный'),
-        ('высокий', 'Высокий'),
-        ('срочный', 'Срочный'),
-    )
-    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='обычный', verbose_name='Приоритет')
-    
     PAYMENT_METHOD_CHOICES = (
         ('наличные', 'Наличные'),
         ('карта', 'Банковская карта'),

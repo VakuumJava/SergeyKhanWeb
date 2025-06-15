@@ -6,7 +6,7 @@ import { API } from "@shared/constants/constants";
 import { Master as Operator } from "@shared/constants/types";
 import { HistoryPayments } from "@shared/finances/chartFinances/historyPayments";
 import { UniversalBalanceManager } from "@workspace/ui/components/shared";
-import { Button } from "@workspace/ui/components/button";
+import { Button } from "@workspace/ui/components/ui";
 import {
     Dialog,
     DialogTrigger,
@@ -15,7 +15,7 @@ import {
     DialogTitle,
     DialogFooter,
     DialogClose,
-} from "@workspace/ui/components/dialog";
+} from "@workspace/ui/components/ui";
 
 interface OperatorProfileProps {
     id: string;

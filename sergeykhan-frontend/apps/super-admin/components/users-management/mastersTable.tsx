@@ -208,8 +208,8 @@ const MastersTable: React.FC<MastersTableProps> = ({ mastersData }) => {
                             table.getRowModel().rows.map((row) => (
                               <TableRow
                                 key={row.id}
-                                className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-                                onClick={() => router.push(`/master-management/${row.original.id}`)}
+                                className="cursor-pointer hover:bg-muted"
+                                onClick={() => router.push(`/users/master/${row.original.id}`)}
                               >
                                   {row.getVisibleCells().map((cell) => (
                                     <TableCell key={cell.id}>
@@ -221,7 +221,7 @@ const MastersTable: React.FC<MastersTableProps> = ({ mastersData }) => {
                           ) : (
                             <TableRow>
                                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                                    No masters.
+                                    Мастера не найдены.
                                 </TableCell>
                             </TableRow>
                           )}

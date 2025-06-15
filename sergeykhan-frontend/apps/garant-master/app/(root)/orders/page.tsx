@@ -5,7 +5,7 @@ const Orders = () => {
   return (
     <div>
       {/* Use OrdersTab with garant-master specific role restrictions */}
-      <OrdersTab status={'master'} accessStatus={'pro'} />
+      <OrdersTab status={'master'} accessStatus={'pro'} userRole={'garant-master'} />
     </div>
   )
 }

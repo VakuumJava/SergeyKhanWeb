@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API } from '@shared/constants/constants';
-import { Button } from '@workspace/ui/components/button';
-import { Input } from '@workspace/ui/components/input';
+import { Button } from '@workspace/ui/components/ui';
+import { Input } from '@workspace/ui/components/ui';
 import { Label } from '@workspace/ui/components/label';
 import { Textarea } from '@workspace/ui/components/textarea';
 import {
@@ -15,7 +15,7 @@ import {
     DialogTrigger,
     DialogFooter,
     DialogClose,
-} from '@workspace/ui/components/dialog';
+} from '@workspace/ui/components/ui';
 import {
     Select,
     SelectContent,

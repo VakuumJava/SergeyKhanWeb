@@ -7,9 +7,9 @@ import {
     DialogHeader,
     DialogTitle,
     DialogFooter,
-} from '@workspace/ui/components/dialog';
-import { Button } from '@workspace/ui/components/button';
-import { Input } from '@workspace/ui/components/input';
+} from '@workspace/ui/components/ui';
+import { Button } from '@workspace/ui/components/ui';
+import { Input } from '@workspace/ui/components/ui';
 import { API } from '@shared/constants/constants';
 
 interface IUser {

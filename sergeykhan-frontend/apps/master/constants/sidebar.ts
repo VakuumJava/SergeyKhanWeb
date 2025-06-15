@@ -18,16 +18,15 @@ export const sidebar_items = [
                 title: "Доступные заказы",
                 url: "/orders",
                 icon: ClipboardList,
-            },
-          {
+            },            {
                 title: "Взятые заказы",
                 url: "/orders-taken",
                 icon: ClipboardList,
             },
             {
-                title: "Календарь загруженности",
-                url: "/calendar",
-                icon: CalendarDays,
+                title: "Мое расписание",
+                url: "/schedule",
+                icon: Clock,
             },
             {
                 title: "Финансы",

@@ -16,7 +16,6 @@ try:
 except CustomUser.DoesNotExist:
     # Создаем нового super-admin пользователя
     user = CustomUser.objects.create_user(
-        username='superadmin',
         email='superadmin@example.com',
         password='admin123',
         role='super-admin',

@@ -218,8 +218,8 @@ const OperatorsTable: React.FC<OperatorsTableProps> = ({ operatorsData }) => {
                                 table.getRowModel().rows.map((row) => (
                                     <TableRow
                                         key={row.id}
-                                        className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-                                        onClick={() => router.push(`/operators-management/${row.original.id}`)}
+                                        className="cursor-pointer hover:bg-muted"
+                                        onClick={() => router.push(`/users/operator/${row.original.id}`)}
                                     >
                                         {row.getVisibleCells().map((cell) => (
                                             <TableCell key={cell.id}>
@@ -231,7 +231,7 @@ const OperatorsTable: React.FC<OperatorsTableProps> = ({ operatorsData }) => {
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={columns.length} className="h-24 text-center">
-                                        No operators.
+                                        Операторы не найдены.
                                     </TableCell>
                                 </TableRow>
                             )}

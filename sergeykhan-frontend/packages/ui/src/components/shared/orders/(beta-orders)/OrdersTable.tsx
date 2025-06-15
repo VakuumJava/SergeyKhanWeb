@@ -180,7 +180,7 @@ export function OrdersDataTable({
                   <DialogTrigger asChild>
                     <Button variant="outline" size="icon"><Plus/></Button>
                   </DialogTrigger>
-                  <DialogContent className="w-full md:max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <DialogContent className="w-full md:max-w-7xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>Добавить заказ мастеру</DialogTitle></DialogHeader>
                     <div className="mt-4">
                       <AllOrders isActiveEdit onSelectedChange={setToAssign} masterId={masterId}/>

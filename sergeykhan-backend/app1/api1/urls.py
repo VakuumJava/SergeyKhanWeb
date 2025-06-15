@@ -32,9 +32,18 @@ from .master_workload_views import (
     all_masters_workload,
     validate_order_scheduling
 )
+from .views.auth_views import get_masters, get_operators, get_curators
 from .capacity_analysis import (
     get_capacity_analysis,
     get_weekly_capacity_forecast
+)
+from .schedule_views import master_schedule_view
+from .workload_views import (
+    get_master_workload,
+    get_all_masters_workload,
+    get_master_availability,
+    get_best_available_master,
+    assign_order_with_workload_check
 )
 
 urlpatterns = [
@@ -65,10 +74,18 @@ urlpatterns = [
     path('api/user/', get_user_by_token, name='get_user_by_token'),
     path('api/users/create/', create_user, name='create_user'),
     path('api/orders/new/', get_orders_new, name='get_orders_new'),
-    path('api/orders/all/', get_all_orders, name='all_orders'),
-    path('api/orders/last-4hours/', get_orders_last_4hours, name='orders_last_4hours'),
+    path('api/orders/all/', get_all_orders, name='all_orders'),    path('api/orders/last-4hours/', get_orders_last_4hours, name='orders_last_4hours'),
     path('api/orders/last-day/', get_orders_last_day, name='orders_last_day'),    path('api/orders/active/', get_active_orders, name='active_orders'),
-    path('api/orders/non-active/', get_non_active_orders, name='non_active_orders'),
+    path('api/orders/non-active/', get_non_active_orders, name='non_active_orders'),    path('api/orders/master-available/', get_master_available_orders, name='master_available_orders'),
+    path('api/orders/transferred/', get_transferred_orders, name='transferred_orders'),
+    path('api/orders/<int:order_id>/remove-master/', remove_master, name='remove_master'),
+    
+    # Workload management endpoints
+    path('api/workload/master/<int:master_id>/', get_master_workload, name='get_master_workload'),
+    path('api/workload/masters/', get_all_masters_workload, name='get_all_masters_workload'),
+    path('api/availability/master/<int:master_id>/', get_master_availability, name='get_master_availability'),
+    path('api/availability/best-master/', get_best_available_master, name='get_best_available_master'),
+    path('api/orders/<int:order_id>/assign-with-check/', assign_order_with_workload_check, name='assign_order_with_workload_check'),
     # path('orders/<int:order_id>/transfer/', transfer_order_to_warranty_master, name='transfer_order_to_warranty_master'),
     # path('orders/transferred/', get_transferred_orders),
     # path('orders/<int:order_id>/complete_transferred/', complete_transferred_order),
@@ -135,10 +152,13 @@ urlpatterns = [
     path('api/masters/<int:master_id>/availability/<int:availability_id>/', master_availability_detail, name='master_availability_detail'),
     path('api/masters/<int:master_id>/workload/', master_workload_detail, name='master_workload_detail'),    path('api/masters/workload/all/', all_masters_workload, name='all_masters_workload'),
     path('api/orders/validate-scheduling/', validate_order_scheduling, name='validate_order_scheduling'),
-    
-    # Capacity Analysis endpoints
+      # Capacity Analysis endpoints
     path('api/capacity/analysis/', get_capacity_analysis, name='get_capacity_analysis'),
-    path('api/capacity/weekly-forecast/', get_weekly_capacity_forecast, name='get_weekly_capacity_forecast'),# Order Completion endpoints
+    path('api/capacity/weekly-forecast/', get_weekly_capacity_forecast, name='get_weekly_capacity_forecast'),
+    
+    # Master Schedule endpoints
+    path('api/master/schedule/', master_schedule_view, name='master_schedule'),
+    path('api/master/schedule/<int:master_id>/', master_schedule_view, name='master_schedule_detail'),# Order Completion endpoints
     path('api/orders/<int:order_id>/complete/', complete_order, name='complete_order'),
     path('api/completions/master/', get_master_completions, name='get_master_completions'),
     path('api/completions/pending/', get_pending_completions, name='get_pending_completions'),

@@ -18,7 +18,7 @@ from .middleware import role_required
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-@role_required(['super-admin', 'curator', 'operator'])
+@role_required(['super-admin', 'curator', 'operator', 'master'])
 def get_capacity_analysis(request):
     """
     Анализ пропускной способности мастеров и рекомендации по планированию
@@ -244,7 +244,7 @@ def generate_recommendations(today_analysis, tomorrow_analysis, total_pending_or
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-@role_required(['super-admin', 'curator', 'operator'])
+@role_required(['super-admin', 'curator', 'operator', 'master'])
 def get_weekly_capacity_forecast(request):
     """
     Прогноз пропускной способности на неделю вперед

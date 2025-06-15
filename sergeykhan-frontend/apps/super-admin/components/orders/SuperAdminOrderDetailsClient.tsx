@@ -11,7 +11,7 @@ import {
   TableBody,
   TableCell,
 } from "@workspace/ui/components/table";
-import { Button } from "@workspace/ui/components/button";
+import { Button } from "@workspace/ui/components/ui";
 import {
   Dialog,
   DialogTrigger,
@@ -20,8 +20,8 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
-} from "@workspace/ui/components/dialog";
-import { Input } from "@workspace/ui/components/input";
+} from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
 import {
   Select,
   SelectContent,
@@ -33,6 +33,7 @@ import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Trash2, UserCheck, UserX, AlertTriangle, User, Phone, MapPin, FileText, DollarSign, Calendar } from "lucide-react";
 import CompleteOrderDialog from "./CompleteOrderDialog";
+import OrderAssignmentPanel from "@workspace/ui/components/shared/orders/order-assignment/OrderAssignmentPanel";
 import { useRouter } from "next/navigation";
 
 interface Props {
@@ -285,6 +286,79 @@ export default function SuperAdminOrderDetailsClient({ id }: Props) {
     }
   };
 
+  // Новая функция для работы с OrderAssignmentPanel
+  const handleAssignMasterImproved = async (masterId: number, slotData?: { scheduled_date: string; scheduled_time: string }) => {
+    if (!order) return;
+    const token = localStorage.getItem("token");
+
+    try {
+      console.log('🔧 SuperAdminOrderDetailsClient: Назначаю мастера', masterId, 'на заказ', order.id, 'с данными слота:', slotData);
+      
+      const assignmentData: any = { assigned_master: masterId };
+      
+      // Add slot data if provided
+      if (slotData) {
+        assignmentData.scheduled_date = slotData.scheduled_date;
+        assignmentData.scheduled_time = slotData.scheduled_time;
+      }
+      
+      // Use the correct endpoint pattern
+      const res = await fetch(`${API}/assign/${order.id}/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+        body: JSON.stringify(assignmentData),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        let errorMessage = "Не удалось назначить мастера";
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.error || errorData.detail) {
+            errorMessage = errorData.error || errorData.detail;
+          }
+          
+          // Handle specific backend error messages
+          if (errorMessage.includes("not found or not in processing state")) {
+            errorMessage = "Заказ должен быть в статусе 'в обработке' для назначения мастера. Текущий статус: " + order.status;
+          } else if (errorMessage.includes("already assigned")) {
+            errorMessage = "Заказ уже назначен другому мастеру.";
+          }
+        } catch {
+          if (res.status === 400) {
+            errorMessage = "Заказ недоступен для назначения. Проверьте статус заказа.";
+          } else if (res.status === 401) {
+            errorMessage = "Необходима авторизация";
+          } else if (res.status === 403) {
+            errorMessage = "Недостаточно прав для выполнения действия";
+          } else if (res.status === 404) {
+            errorMessage = "Заказ не найден или неверный эндпоинт";
+          } else if (res.status >= 500) {
+            errorMessage = "Ошибка сервера";
+          }
+        }
+
+        console.error('❌ SuperAdminOrderDetailsClient: Ошибка назначения мастера:', errorMessage);
+        alert(errorMessage);
+        return;
+      }
+
+      const data = await res.json();
+      console.log('✅ SuperAdminOrderDetailsClient: Мастер успешно назначен:', data);
+      setOrder(data);
+      setIsAssignOpen(false);
+      alert("Мастер успешно назначен!");
+      
+    } catch (error) {
+      console.error("❌ SuperAdminOrderDetailsClient: Ошибка при назначении мастера:", error);
+      alert("Произошла ошибка при назначении мастера");
+    }
+  };
+
   const handleRemoveMaster = async () => {
     if (!order || !order.assigned_master) return;
     const token = localStorage.getItem("token");
@@ -532,47 +606,18 @@ export default function SuperAdminOrderDetailsClient({ id }: Props) {
         
         <div className="flex flex-wrap gap-3">
           {/* Assign Master */}
-          <Dialog open={isAssignOpen} onOpenChange={(open) => {
-            setIsAssignOpen(open);
-            if (open && masters.length === 0) {
-              fetchMasters();
-            }
-          }}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                <UserCheck className="h-4 w-4" />
-                Передать обычному мастеру
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Назначить мастера</DialogTitle>
-              </DialogHeader>
-              <Select value={newMasterId} onValueChange={setNewMasterId}>
-                <SelectTrigger className="mb-4">
-                  <SelectValue placeholder={mastersLoading ? "Загрузка..." : "Выберите мастера"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {masters.map((master) => (
-                    <SelectItem key={master.id} value={master.id.toString()}>
-                      {master.full_name} ({master.email}) - ID: {master.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">Отмена</Button>
-                </DialogClose>
-                <Button 
-                  onClick={handleAssignSubmit}
-                  disabled={!newMasterId || mastersLoading}
-                >
-                  Назначить
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          {/* Improved Assign Master Button */}
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={() => {
+              console.log('🔘 SuperAdminOrderDetailsClient: Открытие модального окна назначения мастера');
+              setIsAssignOpen(true);
+            }}
+          >
+            <UserCheck className="h-4 w-4" />
+            Назначить мастера
+          </Button>
 
           {/* Transfer to Warranty Master */}
           <Dialog open={isTransferOpen} onOpenChange={(open) => {
@@ -699,6 +744,19 @@ export default function SuperAdminOrderDetailsClient({ id }: Props) {
           </p>
         </div>
       )}
+
+      {/* Improved Order Assignment Panel */}
+      <OrderAssignmentPanel
+        isOpen={isAssignOpen}
+        onClose={() => setIsAssignOpen(false)}
+        onAssign={(masterId: number, slotData?: { scheduled_date: string; scheduled_time: string }) => {
+          console.log('🔧 SuperAdminOrderDetailsClient: Получен выбор мастера', masterId, 'для заказа', order?.id, 'с данными слота:', slotData);
+          handleAssignMasterImproved(masterId, slotData);
+        }}
+        orderId={order?.id}
+        orderDate={order?.scheduled_date}
+        orderTime={order?.scheduled_time}
+      />
     </div>
   );
 }

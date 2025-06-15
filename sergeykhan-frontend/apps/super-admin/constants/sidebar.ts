@@ -4,7 +4,7 @@ import {
     UserPlus,
     ChartColumn,
     Headset, Anvil,
-    UserSearch, Podcast, FileClock, Wallet, User, CalendarPlus, CheckCircle, Settings
+    UserSearch, Podcast, FileClock, Wallet, User, CalendarPlus, CheckCircle, Settings, Activity
 } from 'lucide-react';
 
 export const sidebar_items = [
@@ -22,7 +22,7 @@ export const sidebar_items = [
         name: "Инструменты",
         list: [
           {
-                title: "Заказы",
+                title: "Распределение заказов",
                 url: "/orders",
                 icon: ClipboardList,
             }, {
@@ -31,12 +31,16 @@ export const sidebar_items = [
                 icon: Headset,
             },{
                 title: "Управление всеми",
-                url: "/users-management",
+                url: "/users",
                 icon: Anvil,
             }, {
                 title: "Управление дистанционкой",
                 url: "/distance-management",
                 icon: Podcast,
+            },{
+                title: "Нагрузка мастеров",
+                url: "/workload-distribution",
+                icon: Activity,
             },{
                 title: "Завершения заказов",
                 url: "/completions",

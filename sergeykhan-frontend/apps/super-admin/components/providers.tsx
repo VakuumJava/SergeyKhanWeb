@@ -11,8 +11,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       enableSystem
       disableTransitionOnChange
       enableColorScheme
+      forcedTheme={undefined} // This ensures the system theme is respected
     >
-      {children}
+      <div className="min-h-screen bg-background text-foreground">
+        {children}
+      </div>
     </NextThemesProvider>
   )
 }

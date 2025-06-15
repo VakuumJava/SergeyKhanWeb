@@ -2,6 +2,7 @@
 API представления для заказов
 """
 from .utils import *
+from ..models import MasterAvailability
 
 
 # ----------------------------------------
@@ -124,6 +125,9 @@ def assign_master(request, order_id):
                         status=status.HTTP_404_NOT_FOUND)
 
     master_id = request.data.get('assigned_master')
+    scheduled_date = request.data.get('scheduled_date')
+    scheduled_time = request.data.get('scheduled_time')
+    
     if not master_id:
         return Response({'error': 'Master ID is required'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -131,6 +135,60 @@ def assign_master(request, order_id):
         master = CustomUser.objects.get(id=master_id, role='master')
     except CustomUser.DoesNotExist:
         return Response({'error': 'Invalid master ID'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Проверяем доступность мастера если указана дата и время
+    if scheduled_date and scheduled_time:
+        try:
+            from datetime import datetime
+            
+            # Парсим дату и время
+            schedule_date = datetime.strptime(scheduled_date, '%Y-%m-%d').date()
+            schedule_time = datetime.strptime(scheduled_time, '%H:%M:%S').time()
+            
+            # Проверяем есть ли у мастера рабочий слот в это время
+            availability_slots = MasterAvailability.objects.filter(
+                master=master,
+                date=schedule_date,
+                start_time__lte=schedule_time,
+                end_time__gt=schedule_time
+            )
+            
+            if not availability_slots.exists():
+                return Response({
+                    'error': f'Мастер {master.email} недоступен {scheduled_date} в {scheduled_time}. Выберите другое время из доступных слотов.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Проверяем нет ли уже заказа в это время
+            conflicting_orders = Order.objects.filter(
+                assigned_master=master,
+                scheduled_date=schedule_date,
+                scheduled_time=schedule_time
+            ).exclude(id=order_id)
+            
+            if conflicting_orders.exists():
+                return Response({
+                    'error': f'У мастера {master.email} уже есть заказ на {scheduled_date} в {scheduled_time}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Устанавливаем дату и время заказа
+            order.scheduled_date = schedule_date
+            order.scheduled_time = schedule_time
+            
+        except ValueError:
+            return Response({'error': 'Invalid date or time format'}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        # Если дата и время не указаны, проверяем есть ли вообще доступные слоты
+        from django.utils import timezone
+        
+        available_slots = MasterAvailability.objects.filter(
+            master=master,
+            date__gte=timezone.now().date()
+        )
+        
+        if not available_slots.exists():
+            return Response({
+                'error': f'Мастер {master.email} не имеет доступных рабочих слотов. Создайте расписание для мастера.'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
     # Сохраняем старые значения для логирования
     old_master = order.assigned_master.email if order.assigned_master else None
@@ -146,9 +204,11 @@ def assign_master(request, order_id):
         order=order,
         action='master_assigned',
         performed_by=request.user,
-        description=f'Мастер {master.email} назначен на заказ #{order.id}',
+        description=f'Мастер {master.email} назначен на заказ #{order.id}' + 
+                   (f' на {scheduled_date} в {scheduled_time}' if scheduled_date and scheduled_time else ''),
         old_value=f'Мастер: {old_master}, Статус: {old_status}',
-        new_value=f'Мастер: {master.email}, Статус: назначен'
+        new_value=f'Мастер: {master.email}, Статус: назначен' + 
+                  (f', Дата: {scheduled_date}, Время: {scheduled_time}' if scheduled_date and scheduled_time else '')
     )
 
     return Response(OrderSerializer(order).data)

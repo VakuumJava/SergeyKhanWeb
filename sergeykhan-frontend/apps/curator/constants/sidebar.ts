@@ -29,7 +29,7 @@ export const sidebar_items = [
         list: [
 
           {
-                title: "Доступные заказы",
+                title: "Распределение заказов",
                 url: "/orders",
                 icon: ClipboardList,
             },
@@ -43,8 +43,8 @@ export const sidebar_items = [
                 icon: Anvil,
             },
             {
-                title: "Рабочая нагрузка мастеров",
-                url: "/master-workload",
+                title: "Нагрузка мастеров",
+                url: "/workload-distribution",
                 icon: BarChart3,
             },
             {

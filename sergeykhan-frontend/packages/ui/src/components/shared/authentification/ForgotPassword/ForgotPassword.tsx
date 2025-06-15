@@ -5,10 +5,10 @@ import {
     CardDescription,
     CardHeader,
     CardTitle,
-} from "@workspace/ui/components/card";
-import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
-import {Button} from "@workspace/ui/components/button";
+} from "@workspace/ui/components/ui";
+import { Input } from "@workspace/ui/components/ui";
+import { Label } from "@workspace/ui/components/ui";
+import {Button} from "@workspace/ui/components/ui";
 
 export function ForgotPassword({
                                    className,

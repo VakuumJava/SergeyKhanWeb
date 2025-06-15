@@ -1,0 +1,17 @@
+/* 
+Theme adaptability utilities
+These utilities ensure proper theme adaptation for components
+*/
+
+.theme-adaptive {
+  @apply bg-background text-foreground border-border;
+}
+
+.dark-mode-adaptive-card {
+  @apply bg-background text-foreground border-border;
+  @apply dark:bg-gray-900 dark:text-gray-50 dark:border-gray-700;
+}
+
+.table-row-adaptive {
+  @apply hover:bg-muted dark:hover:bg-gray-800;
+}

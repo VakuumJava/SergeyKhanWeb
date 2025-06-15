@@ -1,14 +1,14 @@
-import { Button } from "@workspace/ui/components/button"
+import { Button } from "@workspace/ui/components/ui"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@workspace/ui/components/card"
-import { Input } from "@workspace/ui/components/input"
-import { Label } from "@workspace/ui/components/label"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@workspace/ui/components/tooltip"
+} from "@workspace/ui/components/ui"
+import { Input } from "@workspace/ui/components/ui"
+import { Label } from "@workspace/ui/components/ui"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@workspace/ui/components/ui"
 import { cn } from "@workspace/ui/lib/utils"
 
 export function LoginForm({

@@ -222,8 +222,8 @@ const CuratorsTable: React.FC<CuratorsTableProps> = ({ curatorsData }) => {
                                 table.getRowModel().rows.map((row) => (
                                     <TableRow
                                         key={row.id}
-                                        className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-                                        onClick={() => router.push(`/curators-management/${row.original.id}`)}
+                                        className="cursor-pointer hover:bg-muted"
+                                        onClick={() => router.push(`/users/curator/${row.original.id}`)}
                                     >
                                         {row.getVisibleCells().map((cell) => (
                                             <TableCell key={cell.id}>
@@ -235,7 +235,7 @@ const CuratorsTable: React.FC<CuratorsTableProps> = ({ curatorsData }) => {
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={columns.length} className="h-24 text-center">
-                                        No curators.
+                                        Кураторы не найдены.
                                     </TableCell>
                                 </TableRow>
                             )}

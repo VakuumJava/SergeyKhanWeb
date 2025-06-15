@@ -1,0 +1,129 @@
+
+> shadcn-ui-monorepo@0.0.1 dev
+> turbo dev
+
+turbo 2.3.3
+
+• Packages in scope: @workspace/eslint-config, @workspace/typescript-config, @workspace/ui, curator, garant-master, master, operator, super-admin
+• Running dev in 8 packages
+• Remote caching disabled
+curator:dev: cache bypass, force executing 24675b804190c9c8
+master:dev: cache bypass, force executing 2d1df5a9fea83621
+operator:dev: cache bypass, force executing 55b0caf1e7ff6a80
+garant-master:dev: cache bypass, force executing 1669b23907f89667
+super-admin:dev: cache bypass, force executing 60c9cc42086797c5
+operator:dev: 
+operator:dev: > operator@0.0.1 dev /Users/bekzhan/Documents/projects/sk/SergeyKhanWeb/sergeykhan-frontend/apps/operator
+operator:dev: > next dev --turbopack
+operator:dev: 
+super-admin:dev: 
+super-admin:dev: > super-admin@0.0.1 dev /Users/bekzhan/Documents/projects/sk/SergeyKhanWeb/sergeykhan-frontend/apps/super-admin
+super-admin:dev: > next dev --turbopack
+super-admin:dev: 
+garant-master:dev: 
+garant-master:dev: > garant-master@0.0.1 dev /Users/bekzhan/Documents/projects/sk/SergeyKhanWeb/sergeykhan-frontend/apps/garant-master
+garant-master:dev: > next dev --turbopack
+garant-master:dev: 
+curator:dev: 
+curator:dev: > curator@0.0.1 dev /Users/bekzhan/Documents/projects/sk/SergeyKhanWeb/sergeykhan-frontend/apps/curator
+curator:dev: > next dev --turbopack
+curator:dev: 
+master:dev: 
+master:dev: > master@0.0.1 dev /Users/bekzhan/Documents/projects/sk/SergeyKhanWeb/sergeykhan-frontend/apps/master
+master:dev: > next dev --turbopack
+master:dev: 
+super-admin:dev:  ⚠ Port 3000 is in use, trying 3001 instead.
+operator:dev:  ⚠ Port 3000 is in use, trying 3001 instead.
+operator:dev:  ⚠ Port 3001 is in use, trying 3002 instead.
+operator:dev:  ⚠ Port 3002 is in use, trying 3003 instead.
+super-admin:dev:  ⚠ Port 3001 is in use, trying 3002 instead.
+super-admin:dev:  ⚠ Port 3002 is in use, trying 3003 instead.
+super-admin:dev:  ⚠ Port 3003 is in use, trying 3004 instead.
+super-admin:dev:  ⚠ Port 3004 is in use, trying 3005 instead.
+garant-master:dev:  ⚠ Port 3000 is in use, trying 3001 instead.
+master:dev:  ⚠ Port 3000 is in use, trying 3001 instead.
+master:dev:  ⚠ Port 3001 is in use, trying 3002 instead.
+master:dev:  ⚠ Port 3002 is in use, trying 3003 instead.
+master:dev:  ⚠ Port 3003 is in use, trying 3004 instead.
+master:dev:  ⚠ Port 3004 is in use, trying 3005 instead.
+master:dev:  ⚠ Port 3005 is in use, trying 3006 instead.
+master:dev:  ⚠ Port 3006 is in use, trying 3007 instead.
+garant-master:dev:  ⚠ Port 3001 is in use, trying 3002 instead.
+garant-master:dev:  ⚠ Port 3002 is in use, trying 3003 instead.
+garant-master:dev:  ⚠ Port 3003 is in use, trying 3004 instead.
+garant-master:dev:  ⚠ Port 3004 is in use, trying 3005 instead.
+garant-master:dev:  ⚠ Port 3005 is in use, trying 3006 instead.
+operator:dev:  ⚠ Port 3003 is in use, trying 3004 instead.
+operator:dev:  ⚠ Port 3004 is in use, trying 3005 instead.
+operator:dev:  ⚠ Port 3005 is in use, trying 3006 instead.
+garant-master:dev:  ⚠ Port 3006 is in use, trying 3007 instead.
+garant-master:dev:  ⚠ Port 3007 is in use, trying 3008 instead.
+curator:dev:  ⚠ Port 3000 is in use, trying 3001 instead.
+curator:dev:  ⚠ Port 3001 is in use, trying 3002 instead.
+curator:dev:  ⚠ Port 3002 is in use, trying 3003 instead.
+curator:dev:  ⚠ Port 3003 is in use, trying 3004 instead.
+curator:dev:  ⚠ Port 3004 is in use, trying 3005 instead.
+curator:dev:  ⚠ Port 3005 is in use, trying 3006 instead.
+curator:dev:  ⚠ Port 3006 is in use, trying 3007 instead.
+curator:dev:  ⚠ Port 3007 is in use, trying 3008 instead.
+curator:dev:  ⚠ Port 3008 is in use, trying 3009 instead.
+master:dev:    ▲ Next.js 15.1.0 (Turbopack)
+master:dev:    - Local:        http://localhost:3007
+master:dev:    - Network:      http://192.168.43.178:3007
+master:dev: 
+master:dev:  ✓ Starting...
+garant-master:dev:    ▲ Next.js 15.1.0 (Turbopack)
+garant-master:dev:    - Local:        http://localhost:3008
+garant-master:dev:    - Network:      http://192.168.43.178:3008
+garant-master:dev: 
+garant-master:dev:  ✓ Starting...
+super-admin:dev:    ▲ Next.js 15.1.0 (Turbopack)
+super-admin:dev:    - Local:        http://localhost:3005
+super-admin:dev:    - Network:      http://192.168.43.178:3005
+super-admin:dev: 
+super-admin:dev:  ✓ Starting...
+curator:dev:    ▲ Next.js 15.1.0 (Turbopack)
+curator:dev:    - Local:        http://localhost:3009
+curator:dev:    - Network:      http://192.168.43.178:3009
+curator:dev: 
+curator:dev:  ✓ Starting...
+operator:dev:    ▲ Next.js 15.1.0 (Turbopack)
+operator:dev:    - Local:        http://localhost:3006
+operator:dev:    - Network:      http://192.168.43.178:3006
+operator:dev: 
+operator:dev:  ✓ Starting...
+garant-master:dev:  ✓ Ready in 3.8s
+garant-master:dev:  ⚠ Webpack is configured while Turbopack is not, which may cause problems.
+garant-master:dev:  ⚠ See instructions if you need to configure Turbopack:
+garant-master:dev:   https://nextjs.org/docs/app/api-reference/next-config-js/turbo
+garant-master:dev: 
+operator:dev:  ✓ Ready in 3.8s
+master:dev:  ✓ Ready in 3.8s
+operator:dev:  ⚠ Webpack is configured while Turbopack is not, which may cause problems.
+operator:dev:  ⚠ See instructions if you need to configure Turbopack:
+operator:dev:   https://nextjs.org/docs/app/api-reference/next-config-js/turbo
+operator:dev: 
+master:dev:  ⚠ Webpack is configured while Turbopack is not, which may cause problems.
+master:dev:  ⚠ See instructions if you need to configure Turbopack:
+master:dev:   https://nextjs.org/docs/app/api-reference/next-config-js/turbo
+master:dev: 
+super-admin:dev:  ✓ Ready in 3.8s
+super-admin:dev:  ⚠ Webpack is configured while Turbopack is not, which may cause problems.
+super-admin:dev:  ⚠ See instructions if you need to configure Turbopack:
+super-admin:dev:   https://nextjs.org/docs/app/api-reference/next-config-js/turbo
+super-admin:dev: 
+curator:dev:  ✓ Ready in 3.9s
+curator:dev:  ⚠ Webpack is configured while Turbopack is not, which may cause problems.
+curator:dev:  ⚠ See instructions if you need to configure Turbopack:
+curator:dev:   https://nextjs.org/docs/app/api-reference/next-config-js/turbo
+curator:dev: 
+curator:dev: [?25h
+operator:dev: [?25h
+super-admin:dev: [?25h
+garant-master:dev: [?25h
+master:dev: [?25h
+
+ Tasks:    5 successful, 5 total
+Cached:    0 cached, 5 total
+  Time:    39m57.936s 
+

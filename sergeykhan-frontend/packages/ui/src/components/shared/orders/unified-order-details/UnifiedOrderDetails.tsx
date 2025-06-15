@@ -48,6 +48,7 @@ import {
 import OrderCompletionForm from "@shared/orders/completion/OrderCompletionForm";
 import { OrderProfitPreview } from "../../profit-settings";
 import { formatOrderForMaster, getAddressForMaster, maskPhoneForMaster } from "@shared/utils/masterDataUtils";
+import OrderAssignmentPanel from "../order-assignment/OrderAssignmentPanel";
 
 export interface Order {
   id: number;
@@ -118,9 +119,6 @@ const UnifiedOrderDetails: React.FC<UnifiedOrderDetailsProps> = ({ id, userRole,
 
   // Dialog states
   const [isAssignOpen, setIsAssignOpen] = useState(false);
-  const [newMasterId, setNewMasterId] = useState("");
-  const [masters, setMasters] = useState<Master[]>([]);
-  const [mastersLoading, setMastersLoading] = useState(false);
 
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [warrantyMasterId, setWarrantyMasterId] = useState("");
@@ -185,29 +183,6 @@ const UnifiedOrderDetails: React.FC<UnifiedOrderDetailsProps> = ({ id, userRole,
     fetchOrderDetails();
   }, [id, userRole]);
 
-  const fetchMasters = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    setMastersLoading(true);
-    try {
-      const res = await fetch(`${API}/users/masters/`, {
-        headers: { 
-          "Content-Type": "application/json", 
-          Authorization: `Token ${token}` 
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setMasters(data.results || data);
-      }
-    } catch (error) {
-      console.error("Ошибка при загрузке мастеров:", error);
-    } finally {
-      setMastersLoading(false);
-    }
-  };
-
   const fetchWarrantyMasters = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -251,28 +226,39 @@ const UnifiedOrderDetails: React.FC<UnifiedOrderDetailsProps> = ({ id, userRole,
     }
   };
 
-  const handleAssignMaster = async (masterId: number) => {
+  const handleAssignMaster = async (masterId: number, slotData?: { scheduled_date: string; scheduled_time: string }) => {
     if (!order) return;
 
     const token = localStorage.getItem("token");
     try {
+      const assignmentData: any = { assigned_master: masterId };
+      
+      // Add slot data if provided
+      if (slotData) {
+        assignmentData.scheduled_date = slotData.scheduled_date;
+        assignmentData.scheduled_time = slotData.scheduled_time;
+      }
+      
       const response = await fetch(`${API}/assign/${order.id}/`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Token ${token}`,
         },
-        body: JSON.stringify({ assigned_master: masterId }),
+        body: JSON.stringify(assignmentData),
       });
 
       if (response.ok) {
         const updatedOrder = await response.json();
         setOrder(updatedOrder);
         setIsAssignOpen(false);
-        setNewMasterId("");
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка при назначении мастера');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Ошибка при назначении мастера:", error);
+      alert(error.message || "Ошибка при назначении мастера");
     }
   };
 
@@ -408,8 +394,11 @@ const UnifiedOrderDetails: React.FC<UnifiedOrderDetailsProps> = ({ id, userRole,
         actions.push({
           label: 'Назначить мастера',
           onClick: () => {
-            fetchMasters();
+            console.log('🔘 Кнопка "Назначить мастера" нажата');
+            console.log('📋 Данные заказа:', { id: order?.id, status: order?.status });
+            console.log('👤 Роль пользователя:', userRole);
             setIsAssignOpen(true);
+            console.log('✅ isAssignOpen установлен в true');
           },
           icon: User
         });
@@ -805,40 +794,16 @@ const UnifiedOrderDetails: React.FC<UnifiedOrderDetailsProps> = ({ id, userRole,
       </div>
 
       {/* Dialogs */}
-      <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Назначить мастера</DialogTitle>
-          </DialogHeader>
-          <Select value={newMasterId} onValueChange={setNewMasterId}>
-            <SelectTrigger className="mb-4">
-              <SelectValue placeholder={mastersLoading ? "Загрузка..." : "Выберите мастера"} />
-            </SelectTrigger>
-            <SelectContent>
-              {masters.map((master) => (
-                <SelectItem key={master.id} value={master.id.toString()}>
-                  {master.full_name} ({master.email}) - ID: {master.id}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAssignOpen(false)}>
-              Отмена
-            </Button>
-            <Button 
-              onClick={() => {
-                if (newMasterId) {
-                  handleAssignMaster(parseInt(newMasterId));
-                }
-              }}
-              disabled={!newMasterId || mastersLoading}
-            >
-              Назначить
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <OrderAssignmentPanel
+        isOpen={isAssignOpen}
+        onClose={() => setIsAssignOpen(false)}
+        onAssign={(masterId: number, slotData?: { scheduled_date: string; scheduled_time: string }) => {
+          handleAssignMaster(masterId, slotData);
+        }}
+        orderId={order?.id}
+        orderDate={order?.scheduled_date}
+        orderTime={order?.scheduled_time}
+      />
 
       <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
         <DialogContent>
