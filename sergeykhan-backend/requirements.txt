@@ -37,8 +37,8 @@ Pillow==10.4.0
 # django-extensions==3.2.3
 
 # Production Tools (uncomment for production)
-# gunicorn==21.2.0
-# whitenoise==6.6.0
+gunicorn==21.2.0
+whitenoise==6.6.0
 
 # Caching with Redis (uncomment if using Redis)
 # redis==5.0.7
